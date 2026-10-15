@@ -27,7 +27,15 @@ function validateCollection(payload: unknown): payload is ExperimentCollectionPa
   const candidate = payload as ExperimentCollectionPayload;
   const condition = candidate.Condition;
 
-  return condition === "C1" || condition === "C2" || condition === "C3";
+  return (
+    condition === "C1" ||
+    condition === "C2" ||
+    condition === "C3" ||
+    condition === "C4" ||
+    condition === "C5" ||
+    condition === "C6" ||
+    condition === "C7"
+  );
 }
 
 export async function POST(request: Request) {

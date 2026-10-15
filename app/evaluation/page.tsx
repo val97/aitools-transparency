@@ -19,7 +19,11 @@ import {
   submitExperimentCollection,
 } from "@/app/lib/experimentCollection";
 import {
+  blackBoxUsesSelectedFeatures,
   conditionForStep,
+  evaluatesCardByCard,
+  revealsModelAfterPredicting,
+  showsSelectedFeaturesWithBlackBox,
   useExperimentCondition,
 } from "@/app/lib/experimentCondition";
 import { readSelectedFeatures } from "@/app/lib/featureSelectionState";
@@ -32,6 +36,7 @@ import {
 } from "@/app/modelling/modelInputs";
 import { readModelTrainingResult } from "@/app/modelling/trainingState";
 import { buildWhiteBoxPredictionRows } from "@/app/modelling/whiteBoxTree";
+import { TestCardWalkthrough, TestResultsTable } from "./TestCardWalkthrough";
 
 type AccuracyField = "correct" | "wrong" | "total" | "accuracy";
 type AccuracyInputs = Record<AccuracyField, string>;
@@ -688,10 +693,13 @@ export default function EvaluationPage() {
   const [predictionErrorMessage, setPredictionErrorMessage] = useState<string | null>(null);
   const [tutorialStep, setTutorialStep] = useState<EvaluationTutorialStep>(null);
   const [hasStartedTutorial, setHasStartedTutorial] = useState(false);
+  const [cardPage, setCardPage] = useState<"cards" | "accuracy" | "reflection" | null>(null);
+  const isCardEvaluation = evaluatesCardByCard(experimentCondition);
 
   const modelInput = resolveModelInput({
     condition,
     selectedFeatures,
+    useSelectedFeatures: blackBoxUsesSelectedFeatures(experimentCondition),
   });
   const trainingResult = useMemo(() => readModelTrainingResult(condition), [condition]);
   const evaluationDataFeatures = useMemo(() => {
@@ -699,7 +707,7 @@ export default function EvaluationPage() {
       return modelInput.features;
     }
 
-    if (experimentCondition === "C2") {
+    if (showsSelectedFeaturesWithBlackBox(experimentCondition)) {
       return selectedFeatures;
     }
 
@@ -814,11 +822,12 @@ export default function EvaluationPage() {
     setSaveErrorMessage(null);
 
     try {
-      const rows =
-        condition === "WB"
-          ? trainingResult?.whiteBoxTree?.length
-            ? await buildWhiteBoxPredictionRows(trainingResult.whiteBoxTree, "df_test.csv")
-            : null
+      // A stored tree is used whenever there is one: always in C1, and for
+      // the C4/C5 tree. Other black-box conditions use the backend model.
+      const rows = trainingResult?.whiteBoxTree?.length
+        ? await buildWhiteBoxPredictionRows(trainingResult.whiteBoxTree, "df_test.csv")
+        : condition === "WB"
+          ? null
           : await fetchBlackBoxPredictionRows(modelInput);
 
       if (!rows) {
@@ -826,6 +835,11 @@ export default function EvaluationPage() {
       }
 
       setPredictionRows(rows);
+
+      if (isCardEvaluation) {
+        setTutorialStep(null);
+        setCardPage("cards");
+      }
     } catch (error) {
       setPredictionRows(null);
       setPredictionErrorMessage(error instanceof Error ? error.message : "Une erreur est survenue.");
@@ -914,6 +928,150 @@ export default function EvaluationPage() {
         <p className="rounded-3xl bg-white p-8 text-lg shadow-lg">
           Choisis d&apos;abord une condition sur la page d&apos;accueil.
         </p>
+      </div>
+    );
+  }
+
+  const instructionsOverlay = isInstructionsOpen && (
+    <ActivityInstructionsOverlay
+      title="Consignes"
+      onClose={closeInstructions}
+      stepImage={{
+        alt: "Étape d'évaluation du modèle",
+        height: 540,
+        src: "/Hints/StepsEval.png",
+        width: 6740,
+      }}
+    >
+      <EvaluationInstructionsContent />
+    </ActivityInstructionsOverlay>
+  );
+
+  if (cardPage && predictionRows) {
+    const verificationLine = verificationMessage && (
+      <p
+        className={`text-[14px] font-medium ${
+          invalidFields.size === 0 ? "text-[#0a7f38]" : "text-[#b42318]"
+        }`}
+      >
+        {verificationMessage}
+      </p>
+    );
+
+    return (
+      <div className="relative flex h-dvh w-full items-center justify-center overflow-hidden bg-cover bg-center bg-no-repeat p-[40px] text-[#18181b]" style={{ backgroundImage: `url('${BACKGROUND_IMAGE}')` }}>
+        <ActivityInstructionsButton onPress={openInstructions} />
+        <div aria-hidden="true" className="absolute inset-0 bg-black/35" />
+        <Surface className="relative flex h-full w-full max-w-[1351px] flex-col gap-[16px] p-[32px]">
+          <div className="w-full text-black">
+            <h1 className="text-[24px] font-bold leading-[1.34]">
+              {cardPage === "cards"
+                ? "Évaluation: de nouveaux dinosaures"
+                : cardPage === "accuracy"
+                  ? "Calcule la précision du modèle"
+                  : "Qu'en penses-tu ?"}
+            </h1>
+            <p className="mt-[6px] w-full text-[16px] leading-[1.5]">
+              {cardPage === "cards"
+                ? "Le modèle n'a jamais vu ces dinosaures. Regarde ce qu'il prédit pour chacun et compare avec leur vrai régime."
+                : cardPage === "accuracy"
+                  ? "Utilise les résultats pour compter les bonnes et les mauvaises prédictions, puis calcule la précision."
+                  : "Réponds aux deux questions pour terminer."}
+            </p>
+          </div>
+
+          {cardPage === "cards" && (
+            <TestCardWalkthrough
+              rows={predictionRows}
+              features={modelInput.features}
+              treeNodes={revealsModelAfterPredicting(experimentCondition) ? trainingResult?.whiteBoxTree : undefined}
+              onComplete={() => {
+                setCardPage("accuracy");
+                setTutorialStep("scaffold-counts");
+              }}
+            />
+          )}
+
+          {cardPage === "accuracy" && (
+            <>
+              <div className="min-h-0 flex-1 overflow-auto rounded-[20px] bg-white px-[20px] py-[12px]">
+                <TestResultsTable rows={predictionRows} />
+              </div>
+              <AccuracyScaffold
+                accuracy={accuracyInputs.accuracy}
+                correct={accuracyInputs.correct}
+                invalidFields={invalidFields}
+                onChange={updateAccuracyInput}
+                tutorialStep={tutorialStep}
+                onTutorialDismiss={advanceTutorial}
+                total={accuracyInputs.total}
+                wrong={accuracyInputs.wrong}
+              />
+              <div className="flex flex-wrap items-center justify-between gap-[14px]">
+                <Button
+                  className="min-h-[40px] rounded-[22px] border border-[#dedee0] bg-white px-[18px] text-[15px] font-medium text-[#18181b]"
+                  onPress={() => setCardPage("cards")}
+                >
+                  Retour
+                </Button>
+                <div className="flex items-center gap-[14px]">
+                  {verificationLine}
+                  <Button
+                    className="min-h-[40px] rounded-[22px] bg-[#006fee] px-[18px] text-[15px] font-medium text-white disabled:cursor-not-allowed disabled:opacity-45"
+                    isDisabled={isCheckingAnswers}
+                    onPress={verifyAnswers}
+                  >
+                    Vérifier mes réponses
+                  </Button>
+                  {allCalculationsAreCorrect && (
+                    <Button
+                      className="min-h-[40px] rounded-[22px] bg-[#0a7f38] px-[18px] text-[15px] font-medium text-white"
+                      onPress={() => setCardPage("reflection")}
+                    >
+                      Suite
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+
+          {cardPage === "reflection" && (
+            <>
+              <section className="grid w-full flex-1 grid-cols-1 gap-[18px] lg:grid-cols-2">
+                {QUESTION_PROMPTS.map((prompt, index) => (
+                  <ReflectionPrompt
+                    key={prompt}
+                    onChange={(value) => updateReflectionAnswer(index, value)}
+                    prompt={prompt}
+                    value={reflectionAnswers[index] ?? ""}
+                  />
+                ))}
+              </section>
+              <div className="flex flex-wrap items-center justify-between gap-[14px]">
+                <Button
+                  className="min-h-[40px] rounded-[22px] border border-[#dedee0] bg-white px-[18px] text-[15px] font-medium text-[#18181b]"
+                  onPress={() => setCardPage("accuracy")}
+                >
+                  Retour
+                </Button>
+                <div className="flex items-center gap-[14px]">
+                  {saveErrorMessage && (
+                    <p className="text-[14px] font-medium text-[#b42318]">{saveErrorMessage}</p>
+                  )}
+                  <Button
+                    className="min-h-[40px] rounded-[22px] bg-[#0a7f38] px-[18px] text-[15px] font-medium text-white disabled:cursor-not-allowed disabled:opacity-45"
+                    isDisabled={!canFinishEvaluation}
+                    onPress={saveAndFinish}
+                  >
+                    Sauvegarder mes réponses et finir !
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </Surface>
+        {instructionsOverlay}
       </div>
     );
   }
@@ -1043,20 +1201,7 @@ export default function EvaluationPage() {
           rows={tableOverlay.rows}
         />
       )}
-      {isInstructionsOpen && (
-        <ActivityInstructionsOverlay
-          title="Consignes"
-          onClose={closeInstructions}
-          stepImage={{
-            alt: "Étape d'évaluation du modèle",
-            height: 540,
-            src: "/Hints/StepsEval.png",
-            width: 6740,
-          }}
-        >
-          <EvaluationInstructionsContent />
-        </ActivityInstructionsOverlay>
-      )}
+      {instructionsOverlay}
     </div>
   );
 }

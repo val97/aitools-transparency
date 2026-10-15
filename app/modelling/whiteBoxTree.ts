@@ -35,9 +35,11 @@ export function rowMatchesWhiteBoxFilter(row: TrainingTableRow, filter: WhiteBox
   return filter.branch === "yes" ? matchesCondition : !matchesCondition;
 }
 
-export function predictRowWithWhiteBoxTree(row: TrainingTableRow, nodes: WhiteBoxTreeNode[]) {
+// Ids of the nodes a dinosaur visits, from the root down to its leaf.
+export function whiteBoxPathForRow(row: TrainingTableRow, nodes: WhiteBoxTreeNode[]) {
   const nodesById = new Map(nodes.map((node) => [node.id, node]));
   let currentNode = nodesById.get("root") ?? nodes[0];
+  const path: WhiteBoxTreeNode[] = currentNode ? [currentNode] : [];
 
   while (currentNode?.selectedSplit && currentNode.leftId && currentNode.rightId) {
     const nextNodeId = rowMatchesWhiteBoxSplit(row, currentNode.selectedSplit)
@@ -50,9 +52,16 @@ export function predictRowWithWhiteBoxTree(row: TrainingTableRow, nodes: WhiteBo
     }
 
     currentNode = nextNode;
+    path.push(currentNode);
   }
 
-  return currentNode?.counts?.majority ?? "herbivore";
+  return path;
+}
+
+export function predictRowWithWhiteBoxTree(row: TrainingTableRow, nodes: WhiteBoxTreeNode[]) {
+  const path = whiteBoxPathForRow(row, nodes);
+
+  return path[path.length - 1]?.counts?.majority ?? "herbivore";
 }
 
 export async function buildWhiteBoxPredictionRows(nodes: WhiteBoxTreeNode[], dataFile: LabelledDataFile) {
@@ -64,3 +73,93 @@ export async function buildWhiteBoxPredictionRows(nodes: WhiteBoxTreeNode[], dat
   }));
 }
 
+
+type GiniResponse = {
+  counts: WhiteBoxTreeNode["counts"];
+  results?: WhiteBoxGiniResult[];
+};
+
+async function fetchGini(payload: {
+  features: string[];
+  filters: WhiteBoxSplitFilter[];
+  labels: Record<string, string>;
+  dataFile: LabelledDataFile;
+}) {
+  const response = await fetch("/api/modelling/gini", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error("Impossible d’entraîner le modèle.");
+  }
+
+  return (await response.json()) as GiniResponse;
+}
+
+// Builds the tree the way the glass-box page does when the algorithm decides
+// alone: at each node, take the splittable feature with the lowest Gini
+// impurity; stop when the node is pure, has one dinosaur, or no features left.
+export async function buildGreedyGiniTree({
+  features,
+  labels,
+  dataFile,
+}: {
+  features: string[];
+  labels: Record<string, string>;
+  dataFile: LabelledDataFile;
+}) {
+  const nodes: WhiteBoxTreeNode[] = [];
+
+  async function visit(node: WhiteBoxTreeNode) {
+    nodes.push(node);
+    const response = await fetchGini({ features: node.availableFeatures, filters: node.filters, labels, dataFile });
+    const counts = node.counts ?? response.counts;
+
+    node.counts = counts;
+
+    if (!counts || counts.isPure || counts.total <= 1 || node.availableFeatures.length === 0) {
+      node.isLeaf = true;
+      return;
+    }
+
+    const results = [...(response.results ?? [])].sort((first, second) => first.gini - second.gini);
+    const bestSplit = results.find(
+      (split) =>
+        split.isSplittable !== false ||
+        (node.availableFeatures.length === 1 && split.criterion.length > 0),
+    );
+
+    if (!bestSplit) {
+      node.isLeaf = true;
+      return;
+    }
+
+    const nextFeatures = node.availableFeatures.filter((feature) => feature !== bestSplit.feature);
+    const child = (branch: "yes" | "no"): WhiteBoxTreeNode => ({
+      id: `${node.id}-${branch}`,
+      depth: node.depth + 1,
+      pathLabels: [],
+      filters: [
+        ...node.filters,
+        { feature: bestSplit.feature, operator: bestSplit.operator, value: bestSplit.value, branch },
+      ],
+      availableFeatures: nextFeatures,
+      counts: branch === "yes" ? bestSplit.yes : bestSplit.no,
+    });
+    const noNode = child("no");
+    const yesNode = child("yes");
+
+    node.selectedSplit = bestSplit;
+    node.candidateSplits = results;
+    node.leftId = noNode.id;
+    node.rightId = yesNode.id;
+    await visit(noNode);
+    await visit(yesNode);
+  }
+
+  await visit({ id: "root", depth: 0, pathLabels: [], filters: [], availableFeatures: features });
+
+  return nodes;
+}

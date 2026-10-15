@@ -29,11 +29,13 @@ function fallbackFeatures() {
 export function resolveModelInput({
   condition,
   selectedFeatures,
+  useSelectedFeatures = false,
 }: {
   condition: ModellingCondition;
   selectedFeatures: string[];
+  useSelectedFeatures?: boolean;
 }): ModelInput {
-  if (condition === "BB") {
+  if (condition === "BB" && !(useSelectedFeatures && selectedFeatures.length === 4)) {
     return {
       features: BLACK_BOX_FEATURES,
       data: MODEL_CONFIG.data,
@@ -55,20 +57,22 @@ export function resolveModelInput({
 export function useResolvedModelInput({
   condition,
   selectedFeatures,
+  useSelectedFeatures = false,
 }: {
   condition: ModellingCondition;
   selectedFeatures: string[];
+  useSelectedFeatures?: boolean;
 }) {
   const selectedFeaturesKey = JSON.stringify(selectedFeatures);
   const features = useMemo(() => {
     const stableSelectedFeatures = JSON.parse(selectedFeaturesKey) as string[];
 
-    return condition === "BB"
+    return condition === "BB" && !(useSelectedFeatures && stableSelectedFeatures.length === 4)
       ? BLACK_BOX_FEATURES
       : stableSelectedFeatures.length === 4
         ? stableSelectedFeatures
         : fallbackFeatures();
-  }, [condition, selectedFeaturesKey]);
+  }, [condition, selectedFeaturesKey, useSelectedFeatures]);
   const [counts, setCounts] = useState({
     carnivores: MODEL_CONFIG.init_carnivores,
     herbivores: MODEL_CONFIG.init_herbivores,

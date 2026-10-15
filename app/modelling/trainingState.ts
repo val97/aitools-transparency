@@ -40,6 +40,7 @@ export type WhiteBoxTreeNode = {
   availableFeatures: string[];
   counts?: WhiteBoxNodeCounts;
   selectedSplit?: WhiteBoxGiniResult;
+  candidateSplits?: WhiteBoxGiniResult[];
   leftId?: string;
   rightId?: string;
   isLeaf?: boolean;

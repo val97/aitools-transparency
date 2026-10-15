@@ -18,6 +18,7 @@ type DinoProps = {
   className?: string;
   dino?: DinoVariant;
   labelled1?: boolean;
+  diet?: "herbivore" | "carnivore";
   size?: "Main" | "md" | "sm";
   digit?: number | string;
 };
@@ -98,7 +99,7 @@ function DinoLabel({ diet, size }: { diet: "herbivore" | "carnivore"; size: "Mai
   );
 }
 
-export function Dino({ className, dino = "Apatosaurus", labelled1 = false, size = "Main", digit = "9" }: DinoProps) {
+export function Dino({ className, dino = "Apatosaurus", labelled1 = false, diet, size = "Main", digit = "9" }: DinoProps) {
   const resolvedSize = size === "Main" ? "Main" : size === "sm" ? "sm" : "md";
   const defaultClassNames = dino === "Number" ? "h-[255px] w-[180px]" : sizeStyles[resolvedSize].container;
   const shouldShowLabel = dino !== "Number" && labelled1 && resolvedSize !== "md";
@@ -119,7 +120,7 @@ export function Dino({ className, dino = "Apatosaurus", labelled1 = false, size 
           <Image fill alt={dino} className={imageClassName} sizes={imageSizes} src={dinoImages[dino]} />
         </div>
       )}
-      {shouldShowLabel && <DinoLabel diet={dinoDiets[dino]} size={resolvedSize} />}
+      {shouldShowLabel && <DinoLabel diet={diet ?? dinoDiets[dino]} size={resolvedSize} />}
       {dino === "Number" && (
         <div className="relative h-full w-full">
           <div

@@ -11,7 +11,7 @@ import {
   type ValidIdentificationKeys,
 } from "./key";
 
-const PERSON_LABELS = ["PERSONNE 1", "PERSONNE 2", "PERSONNE 3"] as const;
+const PERSON_LABELS = ["Élève 1", "Élève 2", "Élève 3 (facultatif)"] as const;
 
 type HomeIdentificationFieldProps = {
   onValidated?: (validatedKeys: ValidIdentificationKeys) => void;
@@ -46,9 +46,9 @@ export function HomeIdentificationField({ onValidated }: HomeIdentificationField
       <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2">
         {PERSON_LABELS.map((personLabel, index) => (
           <TextField key={personLabel} className="min-w-0" isRequired={index < 2}>
-            <Label>Clé d&apos;identification</Label>
+            <Label>{personLabel}</Label>
             <Input
-              placeholder={`(${personLabel}) Entre ta clé ici.`}
+              placeholder="Ta clé, par ex. 123"
               value={identificationKeys[index]}
               onChange={(event) => updateIdentificationKey(index, event.target.value)}
             />

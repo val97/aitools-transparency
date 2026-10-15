@@ -1,5 +1,7 @@
 # Welcome to AI-Tools
 
+> Fork of Eglantine Vialaneix's AI Tools, adding conditions C4 to C7 for a study of transparency and students' mental models of machine learning. C1 to C3 are the original activity, unchanged.
+
 AI-Tools is a digital platform designed to introduce machine learning concepts to teenagers around 14 years old. In the application, students take on the role of archaeologists and follow the four main steps of a typical machine learning pipeline in order to train an algorithm to classify dinosaurs as either **Carnivores** or **Herbivores**.
 
 The learning sequence is organized into four activities: **data labelling**, **feature selection**, **model training**, and **evaluation**. Through these activities, students progressively discover how training data is created, how relevant features are selected, how a model learns from data, and how its performance can be assessed.
@@ -126,7 +128,35 @@ To ensure data collection, a set of user keys was created in order to assigned t
 - C2 (Grey-Box): `C2devX` and `C2devY`
 - C3 (Black-Box): `C3devX` and `C3devY`
 
+- C4 (Data shown, model hidden): `C4devX` and `C4devY`
+- C5 (Data hidden, model revealed after predicting): `C5devX` and `C5devY`
+- C6 (Data shown, model revealed after predicting): `C6devX` and `C6devY`
+- C7 (Data hidden, model hidden): `C7devX` and `C7devY`
+
 The third user key is always optional.
+
+Quicker for testing: the start page has two tabs. "Élèves" is where groups enter their keys (the default, used in class). "Tester une condition" shows the new activities (C4 to C7) as a 2×2 grid and the original activity (C1 to C3, kept as the reference), each card saying what is visible; one click starts that condition with its developer keys (group "dev"). After the choice, a "Mode test" badge names the condition and "Changer" goes back.
+
+### Conditions C4 to C7 (same actions, different transparency)
+
+C4 to C7 were added for the exploratory mental-model study. They form a 2×2: the data preparation is shown (C4, C6) or hidden (C5, C7), and the model is revealed after the guess (C5, C6) or stays closed (C4, C7). The table below describes C4 and C5; C6 does C4's data steps followed by C5's model and evaluation, and C7 does C5's data steps followed by C4's model and evaluation. Nobody labels or picks features: an "archaeologist team" prepared the data (`app/lib/fixedData.ts`). All four conditions train on exactly the same labels and features with the same greedy Gini algorithm, so they get the same tree. Students perform the same actions; only what they see differs.
+
+| Step | C4 (data shown, model hidden) | C5 (data hidden, model shown) |
+|---|---|---|
+| Data labelling | Read the 10 sheets, with the dinosaur's drawing next to the sheet; each card shows the archaeologists' label and their reason | Read the 10 sheets, with the drawing; no labels shown |
+| Data preparation | Labelled table and the 4 chosen features with the team's reason; answer "Explique à un ami ce que l'ordinateur va recevoir pour apprendre." | Only "the data has been prepared"; same question |
+| Model training | Hidden tree; press Entraîner, then Suite opens a separate page where they see what it predicted for each training dinosaur (table, no labels), then tick the features they think it uses, pick the most important one and optionally say why | Same task (page 1/3), then "Ouvrir le modèle" leads to two more full-screen pages: 2/3 the tree's questions next to their guess (which features they ticked vs which the tree really uses), then following a dinosaur; 3/3 opens with the Gini explanation, then the same tree, where clicking a question shows its Gini impurity. "Retour" goes back; the guess is locked once the model is opened. No tables with labels |
+| Evaluation | New dinosaurs one card at a time (data, the closed model's prediction, real diet), then a page to calculate accuracy, then a page with the two reflection questions | Same, but each card also shows the dinosaur's path down the tree |
+
+In C5 and C6 the revealed tree is drawn like C1's tree: question cards with NON/OUI buttons, connector lines, and the path of the selected dinosaur in blue (`app/modelling/ModelReveal.tsx`).
+
+One archaeologist label is deliberately wrong (`MISLABELLED_DINO` in `app/lib/fixedData.ts`, default Styracosaurus labelled carnivore). Set it to `null` for correct labels only. With the default features (bipède, longueur, poids, période) the tree gets 100% on training and 30% on the test set; with no wrong label, 50%.
+
+The feature guess is saved in `BBModellingAnswers` (C4 to C7), and `TrainedTree` (C5 and C6, saved when the model is opened); the answer to the data-preparation question is saved in `FeatureSelectionReason`.
+
+Participant keys: C4 group 1 `921, 534, 267`, group 2 `418, 893, 652`; C5 group 1 `731, 146, 395`, group 2 `587, 812, 269`; C6 group 1 `643, 358, 972`, group 2 `415, 786, 239`; C7 group 1 `527, 864, 193`, group 2 `346, 615, 958`.
+
+C1, C2 and C3 are unchanged.
 
 ## Acknowledgments
 

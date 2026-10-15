@@ -43,3 +43,8 @@ next-env.d.ts
 
 #pycache
 __pycache__/
+# study data (participant answers must never be pushed)
+/data/experiment-collections/
+
+# local backups
+/_backup_before_C4_C5/

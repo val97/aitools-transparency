@@ -4,13 +4,15 @@ import { useEffect, useState } from "react";
 import { ActivityInstructionsOverlay, FeatureSelectionInstructionsContent } from "@/app/components";
 import { type FeatureSelectionTutorialStep } from "@/app/components/FeatureSelectionHints";
 import { markCollectionStepStart } from "@/app/lib/experimentCollection";
-import { conditionForStep, useExperimentCondition } from "@/app/lib/experimentCondition";
+import { conditionForStep, dataExposure, useExperimentCondition } from "@/app/lib/experimentCondition";
 import BlackBox from "./pageBB";
+import PreparedData from "./pagePrepared";
 import WhiteBox from "./pageWB";
 
 export default function FeatureSelectionInstructions() {
   const experimentCondition = useExperimentCondition();
   const condition = conditionForStep(experimentCondition, "feature_selection");
+  const exposure = dataExposure(experimentCondition);
   const [isInstructionsOpen, setIsInstructionsOpen] = useState(true);
   const [tutorialStep, setTutorialStep] = useState<FeatureSelectionTutorialStep>(null);
   const [hasStartedTutorial, setHasStartedTutorial] = useState(false);
@@ -45,6 +47,32 @@ export default function FeatureSelectionInstructions() {
   useEffect(() => {
     markCollectionStepStart("FS");
   }, []);
+
+  if (exposure) {
+    return (
+      <>
+        <PreparedData exposure={exposure} onShowInstructions={openInstructions} />
+        {isInstructionsOpen && (
+          <ActivityInstructionsOverlay
+            title="Consignes"
+            onClose={() => setIsInstructionsOpen(false)}
+            stepImage={{
+              alt: "Étape de sélection des caractéristiques",
+              height: 540,
+              src: "/Hints/StepsFeat.png",
+              width: 6700,
+            }}
+          >
+            <p>
+              {exposure === "exposed"
+                ? "Avant d'entraîner l'algorithme, il faut préparer les données: donner le bon régime alimentaire à chaque dinosaure et choisir les caractéristiques à regarder. L'équipe d'archéologues l'a fait pour toi. Regarde ce qu'ils ont préparé."
+                : "Les données sont prêtes pour l'algorithme."}
+            </p>
+          </ActivityInstructionsOverlay>
+        )}
+      </>
+    );
+  }
 
   if (condition === "WB") {
     return (

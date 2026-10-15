@@ -9,11 +9,13 @@ import {
   type DataLabellingTutorialStep,
 } from "@/app/components";
 import { markCollectionStepStart } from "@/app/lib/experimentCollection";
-import { conditionForStep, useExperimentCondition } from "@/app/lib/experimentCondition";
+import { conditionForStep, dataExposure, useExperimentCondition } from "@/app/lib/experimentCondition";
 
 export default function DataLabellingInstructions() {
   const experimentCondition = useExperimentCondition();
   const condition = conditionForStep(experimentCondition, "data_labelling");
+  const exposure = dataExposure(experimentCondition);
+  const labellingMode = exposure === "exposed" ? "attributed" : exposure === "hidden" ? "hidden" : "stamped";
   const [isInstructionsOpen, setIsInstructionsOpen] = useState(true);
   const [tutorialStep, setTutorialStep] = useState<DataLabellingTutorialStep>(null);
   const [hasStartedTutorial, setHasStartedTutorial] = useState(false);
@@ -79,6 +81,7 @@ export default function DataLabellingInstructions() {
     return (
       <>
         <BlackBox
+          mode={labellingMode}
           onShowInstructions={openInstructions}
           tutorialStep={visibleTutorialStep}
           onTutorialDismiss={advanceTutorial}

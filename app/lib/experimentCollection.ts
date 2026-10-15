@@ -1,7 +1,7 @@
 "use client";
 
 import { readDinoLabels, type DinoLabelMap } from "@/app/lib/dinoLabels";
-import { readExperimentCondition, type ExperimentCondition } from "@/app/lib/experimentCondition";
+import { isModelOpen, readExperimentCondition, type ExperimentCondition } from "@/app/lib/experimentCondition";
 import { readSelectedFeatures } from "@/app/lib/featureSelectionState";
 import { type IdentificationGroup, type IdentificationKey } from "@/app/components/key";
 
@@ -209,7 +209,7 @@ export function saveFeatureTypeAttempt(attemptNumber: number, selectedTypes: Rec
 export function saveTrainedTree(trainedTree: TrainedTreeNode | null) {
   updateExperimentCollection((currentCollection) => ({
     ...currentCollection,
-    TrainedTree: currentCollection.Condition === "C1" ? trainedTree : null,
+    TrainedTree: isModelOpen(currentCollection.Condition) ? trainedTree : null,
   }));
 }
 
@@ -218,8 +218,8 @@ export function saveModelEnd(blackBoxAnswers: string | null, modelTrainingAccura
 
   updateExperimentCollection((currentCollection) => ({
     ...currentCollection,
-    TrainedTree: condition === "C1" ? currentCollection.TrainedTree : null,
-    BBModellingAnswers: condition === "C1" ? null : blackBoxAnswers,
+    TrainedTree: isModelOpen(condition) ? currentCollection.TrainedTree : null,
+    BBModellingAnswers: blackBoxAnswers,
     ModelTrainingAccuracyPercent: modelTrainingAccuracyPercent,
     ModelEndTime: now(),
   }));

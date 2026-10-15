@@ -12,8 +12,10 @@ import {
 } from "@/app/components";
 import { Dino, type DinoName } from "@/app/components/Dino";
 import { DinoBucket } from "@/app/components/DinoBucket";
+import { dinoPictureSrc } from "@/app/lib/dinoPictures";
 import { saveDataLabellingEnd } from "@/app/lib/experimentCollection";
 import { clearDinoLabels, saveDinoLabels, type DinoDiet } from "@/app/lib/dinoLabels";
+import { ARCHAEOLOGIST_DIETS, ARCHAEOLOGIST_LABELS } from "@/app/lib/fixedData";
 
 const imgBlackBox1 = "/background.png";
 const pageClassName = "content-stretch flex h-dvh w-full items-center justify-center overflow-hidden px-[clamp(14px,3.5vw,50px)] py-[clamp(14px,5dvh,60px)] relative";
@@ -28,12 +30,18 @@ const bucketDinoClassName = "content-stretch flex h-[clamp(72px,12.5dvh,128px)] 
 
 type DinoState = "left" | "selected" | "herbivore" | "carnivore";
 
+// stamped: C3, the correct label is stamped on each card.
+// attributed: C4, the card shows the archaeologists' label and their reason.
+// hidden: C5, no label is shown; cards go to a single "read" pile.
+export type LabellingMode = "stamped" | "attributed" | "hidden";
+
 type DinoItem = {
   name: DinoName;
   state: DinoState;
 };
 
 type BlackBoxProps = {
+  mode?: LabellingMode;
   onShowInstructions?: () => void;
   tutorialStep?: DataLabellingTutorialStep;
   onTutorialDismiss?: () => void;
@@ -96,12 +104,15 @@ function NextControl({ isDisabled, onClick }: { isDisabled: boolean; onClick: ()
 }
 
 export default function BlackBox({
+  mode = "stamped",
   onShowInstructions,
   tutorialStep = null,
   onTutorialDismiss = () => {},
 }: BlackBoxProps) {
   const [dinos, setDinos] = useState<DinoItem[]>(initialDinos);
   const [notes, setNotes] = useState("");
+  const diets: Record<DinoName, DinoDiet> = mode === "stamped" ? dinoDiets : (ARCHAEOLOGIST_DIETS as Record<DinoName, DinoDiet>);
+  const showsLabels = mode !== "hidden";
 
   useEffect(() => {
     clearDinoLabels();
@@ -133,7 +144,7 @@ export default function BlackBox({
 
   const renderBucketCards = (bucketDinos: DinoName[]) => {
     return bucketDinos.map((dino) => (
-      <Dino key={dino} className={bucketDinoClassName} dino={dino} labelled1 size="sm" />
+      <Dino key={dino} className={bucketDinoClassName} dino={dino} diet={diets[dino]} labelled1={showsLabels} size="sm" />
     ));
   };
 
@@ -153,7 +164,7 @@ export default function BlackBox({
 
       return currentDinos.map((dino, index) => {
         if (index === currentSelectedIndex) {
-          return { ...dino, state: dinoDiets[dino.name] };
+          return { ...dino, state: diets[dino.name] };
         }
 
         if (!promotedNextDino && dino.state === "left") {
@@ -193,6 +204,17 @@ export default function BlackBox({
             ))}
             <Dino className={stackedDinoClassName} dino="Number" size="md" digit={remainingDinos.length} />
           </div>
+          {mode !== "stamped" && selectedDino && dinoPictureSrc(selectedDino) && (
+            <div className="relative flex h-[clamp(90px,18dvh,170px)] w-full min-w-[180px] shrink-0 items-center justify-center self-stretch rounded-[20px] bg-white p-[10px] shadow-[0_8px_20px_rgba(0,0,0,0.25)]">
+              <Image
+                alt={`Dessin du ${selectedDino}`}
+                className="h-full w-full object-contain"
+                height={310}
+                src={dinoPictureSrc(selectedDino) as string}
+                width={585}
+              />
+            </div>
+          )}
           <div className="flex w-full min-w-[180px] flex-col items-start gap-[4px] flex-[1_0_0] self-stretch">
             <p className="font-medium text-[14px] leading-[1.43] text-[#efefef]">Tes notes:</p>
             {tutorialStep === 2 ? (
@@ -221,7 +243,22 @@ export default function BlackBox({
         </div>
         <div className={mainCardClassName} data-name="Main card">
           {selectedDino ? (
-            <Dino className={mainDinoClassName} dino={selectedDino} labelled1 size="Main" />
+            <>
+              <Dino className={mainDinoClassName} dino={selectedDino} diet={diets[selectedDino]} labelled1={showsLabels} size="Main" />
+              {mode === "attributed" && (
+                <div className="absolute inset-x-[4%] bottom-[3%] z-10 rounded-[16px] bg-white/95 px-[16px] py-[12px] text-[#18181b] shadow-[0_8px_20px_rgba(0,0,0,0.25)]">
+                  <p className="text-[14px] font-semibold leading-[1.4]">
+                    L&apos;équipe d&apos;archéologues l&apos;a étiqueté{" "}
+                    <span className={diets[selectedDino] === "carnivore" ? "text-[#ff383c]" : "text-[#17c964]"}>
+                      {diets[selectedDino] === "carnivore" ? "carnivore" : "herbivore"}
+                    </span>
+                  </p>
+                  <p className="text-[14px] leading-[1.4] text-[#3f3f46]">
+                    «&nbsp;{ARCHAEOLOGIST_LABELS[selectedDino]?.reason}&nbsp;»
+                  </p>
+                </div>
+              )}
+            </>
           ) : (
             <div className="bg-[#f5f5f5] border border-dashed border-[#dedee0] flex h-full flex-col items-center justify-center gap-[24px] rounded-[20px] text-[24px] text-[#71717a] w-full">
               <p>Tous les dinosaures ont été assignés.</p>
@@ -236,9 +273,15 @@ export default function BlackBox({
           )}
         </div>
         <div className={sidePanelClassName} data-name="right">
-          <DinoBucket className="flex-1 min-h-0" data-name="all herbivores">
-            {renderBucketCards(herbivoreDinos)}
-          </DinoBucket>
+          {showsLabels ? (
+            <DinoBucket className="flex-1 min-h-0" data-name="all herbivores">
+              {renderBucketCards(herbivoreDinos)}
+            </DinoBucket>
+          ) : (
+            <DinoBucket className="flex-1 min-h-0" data-name="all read cards">
+              {renderBucketCards([...herbivoreDinos, ...carnivoreDinos])}
+            </DinoBucket>
+          )}
           {tutorialStep === 3 ? (
             <DataLabellingTutorialTarget
               className="w-full"
@@ -251,9 +294,13 @@ export default function BlackBox({
           ) : (
             <NextControl isDisabled={!hasNextDino} onClick={goToNextDino} />
           )}
-          <DinoBucket className="flex-1 min-h-0" data-name="all carnivores">
-            {renderBucketCards(carnivoreDinos)}
-          </DinoBucket>
+          {showsLabels ? (
+            <DinoBucket className="flex-1 min-h-0" data-name="all carnivores">
+              {renderBucketCards(carnivoreDinos)}
+            </DinoBucket>
+          ) : (
+            <div className="flex-1 min-h-0" />
+          )}
         </div>
       </div>
     </div>

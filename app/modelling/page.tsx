@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, type ReactNode, useEffect, useState } from "react";
+import { Suspense, type ReactNode, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button, Surface as HeroSurface, TextArea, Tooltip } from "@heroui/react";
@@ -9,6 +9,7 @@ import {
   ActivityInstructionsButton,
   ActivityInstructionsOverlay,
   ModellingInstructionsContent,
+  type SortConfig,
 } from "@/app/components";
 import {
   blackBoxUsesSelectedFeatures,
@@ -42,7 +43,7 @@ import { countPredictions, fitBlackBoxModel, PredictionTrainingTableOverlay } fr
 import { buildGreedyGiniTree, buildWhiteBoxPredictionRows } from "./whiteBoxTree";
 import { TrainingTableOverlay } from "./TrainingTableOverlay";
 import { markModelAsTrained, useModelTrainingResult, type ModelTrainingResult } from "./trainingState";
-import { computeTrainingAccuracy, type PredictionTableRow, type TableCellValue } from "./tableRows";
+import { compareCellValues, computeTrainingAccuracy, type PredictionTableRow, type TableCellValue } from "./tableRows";
 
 type ModelCardProps = {
   isTrained: boolean;
@@ -469,6 +470,66 @@ function FeatureGuessForm({
   );
 }
 
+// Geological periods, oldest first, so sorting "période" follows time
+// instead of the alphabet.
+const PERIOD_ORDER = [
+  "Trias inférieur",
+  "Trias moyen",
+  "Trias supérieur",
+  "Jurassique inférieur",
+  "Jurassique moyen",
+  "Jurassique supérieur",
+  "Crétacé inférieur",
+  "Crétacé supérieur",
+];
+const PREDICTION_COLUMN = "régime_alimentaire_prédit";
+
+function compareTrainingOutputValues(column: string, firstValue: TableCellValue, secondValue: TableCellValue) {
+  if (column === "période") {
+    const firstIndex = PERIOD_ORDER.indexOf(String(firstValue ?? ""));
+    const secondIndex = PERIOD_ORDER.indexOf(String(secondValue ?? ""));
+
+    if (firstIndex !== -1 && secondIndex !== -1) {
+      return firstIndex - secondIndex;
+    }
+  }
+
+  return compareCellValues(firstValue, secondValue);
+}
+
+function SortableHeader({
+  column,
+  label,
+  sortConfig,
+  onSort,
+}: {
+  column: string;
+  label: string;
+  sortConfig: SortConfig;
+  onSort: (column: string) => void;
+}) {
+  const isSorted = sortConfig?.column === column;
+
+  return (
+    <th
+      className="px-[8px] py-[4px] font-medium"
+      aria-sort={isSorted ? sortConfig.direction : "none"}
+    >
+      <button
+        type="button"
+        className="flex cursor-pointer items-center gap-[6px] whitespace-nowrap text-left font-medium hover:text-[#18181b]"
+        title="Cliquer pour trier"
+        onClick={() => onSort(column)}
+      >
+        <span>{label}</span>
+        <span className="text-[11px] text-[#71717a]" aria-hidden="true">
+          {isSorted ? (sortConfig.direction === "ascending" ? "▲" : "▼") : "↕"}
+        </span>
+      </button>
+    </th>
+  );
+}
+
 // C4 and C5: the model stays closed; students see what it predicted for
 // each training dinosaur and guess the rule behind it.
 function TrainingOutputsTable({
@@ -478,6 +539,37 @@ function TrainingOutputsTable({
   rows: PredictionTableRow[];
   features: string[];
 }) {
+  const [sortConfig, setSortConfig] = useState<SortConfig>(null);
+
+  const sortedRows = useMemo(() => {
+    if (!sortConfig) {
+      return rows;
+    }
+
+    return [...rows].sort((firstRow, secondRow) => {
+      const comparison = compareTrainingOutputValues(
+        sortConfig.column,
+        firstRow[sortConfig.column],
+        secondRow[sortConfig.column],
+      );
+
+      return sortConfig.direction === "ascending" ? comparison : -comparison;
+    });
+  }, [rows, sortConfig]);
+
+  const updateSort = (column: string) => {
+    setSortConfig((currentSort) => {
+      if (currentSort?.column !== column) {
+        return { column, direction: "ascending" };
+      }
+
+      return {
+        column,
+        direction: currentSort.direction === "ascending" ? "descending" : "ascending",
+      };
+    });
+  };
+
   return (
     <section
       className="flex min-w-0 flex-1 flex-col gap-[8px] rounded-[24px] bg-white px-[20px] py-[16px] shadow-[0_2px_8px_rgba(0,0,0,0.06),0_-6px_12px_rgba(0,0,0,0.03),0_14px_28px_rgba(0,0,0,0.08)]"
@@ -490,15 +582,20 @@ function TrainingOutputsTable({
         <table className="w-full border-collapse text-left text-[13px] text-[#18181b] [&_td_span]:min-h-[26px]">
           <thead>
             <tr className="border-b border-[#dedee0] text-[#52525b]">
-              <th className="px-[8px] py-[4px] font-medium">nom</th>
+              <SortableHeader column="nom" label="nom" sortConfig={sortConfig} onSort={updateSort} />
               {features.map((feature) => (
-                <th key={feature} className="px-[8px] py-[4px] font-medium">{feature}</th>
+                <SortableHeader key={feature} column={feature} label={feature} sortConfig={sortConfig} onSort={updateSort} />
               ))}
-              <th className="px-[8px] py-[4px] font-medium">prédiction du modèle</th>
+              <SortableHeader
+                column={PREDICTION_COLUMN}
+                label="prédiction du modèle"
+                sortConfig={sortConfig}
+                onSort={updateSort}
+              />
             </tr>
           </thead>
           <tbody>
-            {rows.map((row, index) => (
+            {sortedRows.map((row, index) => (
               <tr key={String(row.nom ?? index)} className="border-b border-[#f0f0f0]">
                 <td className="px-[8px] py-[2px] font-medium">
                   <span className="flex items-center gap-[8px]">

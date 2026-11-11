@@ -16,6 +16,7 @@ import { Separator } from "@/app/components/Separator";
 import { DinoBucket } from "@/app/components/DinoBucket";
 import { saveDataLabellingEnd } from "@/app/lib/experimentCollection";
 import { clearDinoLabels, saveDinoLabels, type DinoDiet } from "@/app/lib/dinoLabels";
+import { SHEETS_TO_READ } from "@/app/lib/fixedData";
 
 const imgWhiteBox1 = "/background.png";
 const pageClassName = "content-stretch flex h-dvh w-full items-center justify-center overflow-hidden px-[clamp(14px,3.5vw,50px)] py-[clamp(14px,5dvh,60px)] relative";
@@ -41,18 +42,6 @@ type WhiteBoxProps = {
   onTutorialDismiss?: () => void;
 };
 
-const initialDinos: DinoItem[] = [
-  { name: "Apatosaurus", state: "selected" },
-  { name: "Brachiosaurus", state: "left" },
-  { name: "Gallimimus", state: "left" },
-  { name: "Megalosaurus", state: "left" },
-  { name: "Plateosaurus", state: "left" },
-  { name: "Spinosaurus", state: "left" },
-  { name: "Stegosaurus", state: "left" },
-  { name: "Styracosaurus", state: "left" },
-  { name: "Tyrannosaurus", state: "left" },
-  { name: "Utahraptor", state: "left" },
-];
 
 const dinoDiets: Record<DinoName, "herbivore" | "carnivore"> = {
   Apatosaurus: "herbivore",
@@ -67,12 +56,24 @@ const dinoDiets: Record<DinoName, "herbivore" | "carnivore"> = {
   Utahraptor: "carnivore",
 };
 
+// The sheets left to read come first, the first one open; the others are
+// already in their pile, with their correct label.
+function initialDinos(diets: Record<DinoName, DinoDiet>): DinoItem[] {
+  const toRead = SHEETS_TO_READ as DinoName[];
+  const alreadyAnnotated = (Object.keys(diets) as DinoName[]).filter((name) => !toRead.includes(name));
+
+  return [
+    ...alreadyAnnotated.map((name) => ({ name, state: diets[name] })),
+    ...toRead.map((name, index) => ({ name, state: index === 0 ? ("selected" as const) : ("left" as const) })),
+  ];
+}
+
 export default function WhiteBox({
   onShowInstructions,
   tutorialStep = null,
   onTutorialDismiss = () => {},
 }: WhiteBoxProps) {
-  const [dinos, setDinos] = useState<DinoItem[]>(initialDinos);
+  const [dinos, setDinos] = useState<DinoItem[]>(() => initialDinos(dinoDiets));
   const [activeBucket, setActiveBucket] = useState<"herbivore" | "carnivore" | null>(null);
   const [notes, setNotes] = useState("");
   const [showWrongLabelWarning, setShowWrongLabelWarning] = useState(false);

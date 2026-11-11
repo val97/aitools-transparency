@@ -36,6 +36,11 @@ export const ARCHAEOLOGIST_DIETS: DinoLabelMap = Object.fromEntries(
   Object.entries(ARCHAEOLOGIST_LABELS).map(([name, label]) => [name, label.diet]),
 );
 
+// Trial run: students read only these 5 sheets (3 herbivores, 2 carnivores;
+// Styracosaurus keeps the wrong label in C4/C6, so it shows as carnivore).
+// The other 5 start already sorted, "annotated before" by the team.
+export const SHEETS_TO_READ = ["Tyrannosaurus", "Stegosaurus", "Styracosaurus", "Utahraptor", "Brachiosaurus"];
+
 export const PREPARED_FEATURES = ["bipède", "longueur (m)", "poids (kg)", "période"];
 
 export const PREPARED_FEATURES_REASON =

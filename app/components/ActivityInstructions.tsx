@@ -86,9 +86,9 @@ export function DataLabellingInstructionsContent({ condition }: { condition: Act
     return (
       <>
         <p>
-          Voici les fiches d&apos;information de 10 dinosaures. Lis-les
-          attentivement et prends des notes sur les indices qui pourraient t&apos;aider à identifier leur
-          régime alimentaire et classe les dinosaures.
+          L&apos;équipe d&apos;archéologues a déjà annoté 5 des 10 fiches de dinosaures : elles sont déjà
+          rangées. Il reste 5 fiches. Lis-les attentivement, prends des notes sur les indices qui pourraient
+          t&apos;aider à identifier leur régime alimentaire et classe ces 5 dinosaures.
         </p>
         <Image
         alt="Exemples de types de colonnes: numérique, catégorique et booléen"
@@ -105,9 +105,9 @@ export function DataLabellingInstructionsContent({ condition }: { condition: Act
   return (
     <>
       <p>
-          Voici les fiches d&apos;information de 10 dinosaures. Lis-les
-          attentivement et prends des notes sur les indices qui pourraient aider l&apos;algorithme 
-          à identifier leur régime alimentaire.
+          L&apos;équipe d&apos;archéologues a déjà annoté 5 des 10 fiches de dinosaures : elles sont déjà
+          rangées. Il reste 5 fiches. Lis-les attentivement et prends des notes sur les indices qui
+          pourraient aider l&apos;algorithme à identifier leur régime alimentaire.
         </p>
         <Image
         alt="Exemples de types de colonnes: numérique, catégorique et booléen"

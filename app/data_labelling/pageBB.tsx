@@ -15,7 +15,7 @@ import { DinoBucket } from "@/app/components/DinoBucket";
 import { dinoPictureSrc } from "@/app/lib/dinoPictures";
 import { saveDataLabellingEnd } from "@/app/lib/experimentCollection";
 import { clearDinoLabels, saveDinoLabels, type DinoDiet } from "@/app/lib/dinoLabels";
-import { ARCHAEOLOGIST_DIETS, ARCHAEOLOGIST_LABELS } from "@/app/lib/fixedData";
+import { ARCHAEOLOGIST_DIETS, ARCHAEOLOGIST_LABELS, SHEETS_TO_READ } from "@/app/lib/fixedData";
 
 const imgBlackBox1 = "/background.png";
 const pageClassName = "content-stretch flex h-dvh w-full items-center justify-center overflow-hidden px-[clamp(14px,3.5vw,50px)] py-[clamp(14px,5dvh,60px)] relative";
@@ -60,18 +60,17 @@ const dinoDiets: Record<DinoName, "herbivore" | "carnivore"> = {
   Utahraptor: "carnivore",
 };
 
-const initialDinos: DinoItem[] = [
-  { name: "Apatosaurus", state: "selected" },
-  { name: "Brachiosaurus", state: "left" },
-  { name: "Gallimimus", state: "left" },
-  { name: "Megalosaurus", state: "left" },
-  { name: "Plateosaurus", state: "left" },
-  { name: "Spinosaurus", state: "left" },
-  { name: "Stegosaurus", state: "left" },
-  { name: "Styracosaurus", state: "left" },
-  { name: "Tyrannosaurus", state: "left" },
-  { name: "Utahraptor", state: "left" },
-];
+// The sheets left to read come first, the first one open; the others are
+// already in their pile.
+function initialDinos(diets: Record<DinoName, DinoDiet>): DinoItem[] {
+  const toRead = SHEETS_TO_READ as DinoName[];
+  const alreadyAnnotated = (Object.keys(diets) as DinoName[]).filter((name) => !toRead.includes(name));
+
+  return [
+    ...alreadyAnnotated.map((name) => ({ name, state: diets[name] })),
+    ...toRead.map((name, index) => ({ name, state: index === 0 ? ("selected" as const) : ("left" as const) })),
+  ];
+}
 
 function NextControl({ isDisabled, onClick }: { isDisabled: boolean; onClick: () => void }) {
   return (
@@ -109,9 +108,9 @@ export default function BlackBox({
   tutorialStep = null,
   onTutorialDismiss = () => {},
 }: BlackBoxProps) {
-  const [dinos, setDinos] = useState<DinoItem[]>(initialDinos);
-  const [notes, setNotes] = useState("");
   const diets: Record<DinoName, DinoDiet> = mode === "stamped" ? dinoDiets : (ARCHAEOLOGIST_DIETS as Record<DinoName, DinoDiet>);
+  const [dinos, setDinos] = useState<DinoItem[]>(() => initialDinos(diets));
+  const [notes, setNotes] = useState("");
   const showsLabels = mode !== "hidden";
 
   useEffect(() => {

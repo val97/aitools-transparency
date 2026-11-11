@@ -13,7 +13,6 @@ export type ModelRevealStage = "rules" | "gini";
 export type FeatureGuess = {
   features: string[];
   mostImportant: string;
-  reason: string;
 };
 
 // Features the tree really asks about, from the first question down.

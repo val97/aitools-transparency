@@ -1,7 +1,7 @@
 "use client";
 
 import { type ReactNode, useEffect, useMemo, useState } from "react";
-import { Button, Surface as HeroSurface, Input, TextArea, Tooltip } from "@heroui/react";
+import { Button, Surface as HeroSurface, Input, Tooltip } from "@heroui/react";
 import { useRouter } from "next/navigation";
 import { GoGear } from "react-icons/go";
 import {
@@ -61,14 +61,16 @@ const BACKGROUND_IMAGE = "/background.png";
 const LABEL_COLUMN = "régime_alimentaire";
 const PREDICTION_COLUMN = "régime_alimentaire_prédit";
 
-const QUESTION_PROMPTS = [
-  "Es-tu satisfait(e) de la performance du modèle ? Pourquoi ?",
-  "Repense à ce qu'il s'est passé pendant les étapes précédentes. Que changerais-tu pour améliorer la performance du modèle ?",
-];
 const MODEL_TITLE = "Modèle";
+// ✅ or ❌ next to each prediction, so students only count the marks.
+const CORRECTNESS_COLUMN = "correct ?";
 
 function modelTableColumns(features: string[]) {
-  return ["nom", LABEL_COLUMN, PREDICTION_COLUMN, ...features];
+  return ["nom", LABEL_COLUMN, PREDICTION_COLUMN, CORRECTNESS_COLUMN, ...features];
+}
+
+function isCorrectPrediction(row: TestTableRow) {
+  return row[LABEL_COLUMN] === row[PREDICTION_COLUMN];
 }
 
 function compareCellValues(firstValue: string | number | boolean | undefined, secondValue: string | number | boolean | undefined) {
@@ -90,10 +92,6 @@ function compareCellValues(firstValue: string | number | boolean | undefined, se
 
 function emptyAccuracyInputs() {
   return { correct: "", wrong: "", total: "", accuracy: "" };
-}
-
-function emptyReflectionAnswers() {
-  return QUESTION_PROMPTS.map(() => "");
 }
 
 function isCountCorrect(value: string, expectedValue: number) {
@@ -526,30 +524,6 @@ function AccuracyScaffold({
   );
 }
 
-function ReflectionPrompt({
-  onChange,
-  prompt,
-  value,
-}: {
-  onChange: (value: string) => void;
-  prompt: string;
-  value: string;
-}) {
-  return (
-    <label className="flex min-h-[225px] min-w-[116px] flex-col gap-[4px]">
-      <span className="pr-[8px] text-[14px] font-medium leading-[1.43] text-[#18181b]">
-        {prompt}
-      </span>
-      <TextArea
-        className="h-full w-full flex-1 [&>div]:h-full [&>div]:w-full [&_textarea]:min-h-[174px] [&_textarea]:resize-none [&_textarea]:text-[14px]"
-        onChange={(event) => onChange(event.target.value)}
-        placeholder="Ta réponse ici..."
-        value={value}
-      />
-    </label>
-  );
-}
-
 function TestTableOverlay({
   displayFeatures,
   modelInput,
@@ -576,7 +550,9 @@ function TestTableOverlay({
 
         if (isActive) {
           setHeaders(nextHeaders);
-          setRows(nextRows);
+          setRows(
+            nextRows.map((row) => ({ ...row, [CORRECTNESS_COLUMN]: isCorrectPrediction(row) ? "✅" : "❌" })),
+          );
           setErrorMessage(null);
         }
       } catch (error) {
@@ -664,6 +640,7 @@ function TestTableOverlay({
               sortConfig={sortConfig}
               onSort={updateSort}
               getRowKey={(row) => String(row.nom)}
+              getCellClassName={(row) => (isCorrectPrediction(row) ? "bg-[#ecfdf3]" : "bg-[#fef0f0]")}
             />
           )}
         </div>
@@ -680,7 +657,6 @@ export default function EvaluationPage() {
   const selectedFeatures = useMemo(() => readSelectedFeatures(), []);
   const [tableOverlay, setTableOverlay] = useState<TableOverlayState>(null);
   const [accuracyInputs, setAccuracyInputs] = useState<AccuracyInputs>(() => emptyAccuracyInputs());
-  const [reflectionAnswers, setReflectionAnswers] = useState<string[]>(() => emptyReflectionAnswers());
   const [accuracyAttempts, setAccuracyAttempts] = useState(0);
   const [invalidFields, setInvalidFields] = useState<Set<string>>(new Set());
   const [verificationMessage, setVerificationMessage] = useState<string | null>(null);
@@ -693,7 +669,7 @@ export default function EvaluationPage() {
   const [predictionErrorMessage, setPredictionErrorMessage] = useState<string | null>(null);
   const [tutorialStep, setTutorialStep] = useState<EvaluationTutorialStep>(null);
   const [hasStartedTutorial, setHasStartedTutorial] = useState(false);
-  const [cardPage, setCardPage] = useState<"cards" | "accuracy" | "reflection" | null>(null);
+  const [cardPage, setCardPage] = useState<"cards" | "accuracy" | null>(null);
   const isCardEvaluation = evaluatesCardByCard(experimentCondition);
 
   const modelInput = resolveModelInput({
@@ -802,14 +778,8 @@ export default function EvaluationPage() {
       [field]: value,
     }));
   };
-  const updateReflectionAnswer = (index: number, value: string) => {
-    setSaveErrorMessage(null);
-    setReflectionAnswers((currentAnswers) =>
-      currentAnswers.map((currentAnswer, currentIndex) => (currentIndex === index ? value : currentAnswer)),
-    );
-  };
-  const areReflectionAnswersComplete = reflectionAnswers.every((answer) => answer.trim() !== "");
-  const canFinishEvaluation = allCalculationsAreCorrect && areReflectionAnswersComplete;
+  // No reflection questions in the trial run: they are on the pre/post sheet.
+  const canFinishEvaluation = allCalculationsAreCorrect;
   const hasPredicted = predictionRows !== null;
   const predictModel = async () => {
     if (hasPredicted || isPredicting) {
@@ -900,8 +870,8 @@ export default function EvaluationPage() {
         accuracyAttempts,
         modelTrainingAccuracyPercent: accuracyFractionToPercent(trainingResult?.trainingAccuracy),
         modelTestingAccuracyPercent: expected.accuracy.accuracy,
-        perfSatisfactionAnswer: reflectionAnswers[0] ?? "",
-        improvementsAnswer: reflectionAnswers[1] ?? "",
+        perfSatisfactionAnswer: "",
+        improvementsAnswer: "",
       });
       await submitExperimentCollection();
       saveEvaluationResponses({
@@ -910,7 +880,7 @@ export default function EvaluationPage() {
         selectedFeatures,
         accuracyInputs,
         matrixInputs: {},
-        reflectionAnswers,
+        reflectionAnswers: [],
       });
       router.push("/evaluation/fin");
     } catch (error) {
@@ -965,18 +935,12 @@ export default function EvaluationPage() {
         <Surface className="relative flex h-full w-full max-w-[1351px] flex-col gap-[16px] p-[32px]">
           <div className="w-full text-black">
             <h1 className="text-[24px] font-bold leading-[1.34]">
-              {cardPage === "cards"
-                ? "Évaluation: de nouveaux dinosaures"
-                : cardPage === "accuracy"
-                  ? "Calcule la précision du modèle"
-                  : "Qu'en penses-tu ?"}
+              {cardPage === "cards" ? "Évaluation: de nouveaux dinosaures" : "Calcule la précision du modèle"}
             </h1>
             <p className="mt-[6px] w-full text-[16px] leading-[1.5]">
               {cardPage === "cards"
                 ? "Le modèle n'a jamais vu ces dinosaures. Regarde ce qu'il prédit pour chacun et compare avec leur vrai régime."
-                : cardPage === "accuracy"
-                  ? "Utilise les résultats pour compter les bonnes et les mauvaises prédictions, puis calcule la précision."
-                  : "Réponds aux deux questions pour terminer."}
+                : "Utilise les résultats pour compter les bonnes et les mauvaises prédictions, puis calcule la précision."}
             </p>
           </div>
 
@@ -1023,12 +987,15 @@ export default function EvaluationPage() {
                   >
                     Vérifier mes réponses
                   </Button>
-                  {allCalculationsAreCorrect && (
+                  {saveErrorMessage && (
+                    <p className="text-[14px] font-medium text-[#b42318]">{saveErrorMessage}</p>
+                  )}
+                  {canFinishEvaluation && (
                     <Button
                       className="min-h-[40px] rounded-[22px] bg-[#0a7f38] px-[18px] text-[15px] font-medium text-white"
-                      onPress={() => setCardPage("reflection")}
+                      onPress={saveAndFinish}
                     >
-                      Suite
+                      Sauvegarder et finir !
                     </Button>
                   )}
                 </div>
@@ -1036,40 +1003,6 @@ export default function EvaluationPage() {
             </>
           )}
 
-          {cardPage === "reflection" && (
-            <>
-              <section className="grid w-full flex-1 grid-cols-1 gap-[18px] lg:grid-cols-2">
-                {QUESTION_PROMPTS.map((prompt, index) => (
-                  <ReflectionPrompt
-                    key={prompt}
-                    onChange={(value) => updateReflectionAnswer(index, value)}
-                    prompt={prompt}
-                    value={reflectionAnswers[index] ?? ""}
-                  />
-                ))}
-              </section>
-              <div className="flex flex-wrap items-center justify-between gap-[14px]">
-                <Button
-                  className="min-h-[40px] rounded-[22px] border border-[#dedee0] bg-white px-[18px] text-[15px] font-medium text-[#18181b]"
-                  onPress={() => setCardPage("accuracy")}
-                >
-                  Retour
-                </Button>
-                <div className="flex items-center gap-[14px]">
-                  {saveErrorMessage && (
-                    <p className="text-[14px] font-medium text-[#b42318]">{saveErrorMessage}</p>
-                  )}
-                  <Button
-                    className="min-h-[40px] rounded-[22px] bg-[#0a7f38] px-[18px] text-[15px] font-medium text-white disabled:cursor-not-allowed disabled:opacity-45"
-                    isDisabled={!canFinishEvaluation}
-                    onPress={saveAndFinish}
-                  >
-                    Sauvegarder mes réponses et finir !
-                  </Button>
-                </div>
-              </div>
-            </>
-          )}
         </Surface>
         {instructionsOverlay}
       </div>
@@ -1147,17 +1080,6 @@ export default function EvaluationPage() {
                 wrong={accuracyInputs.wrong}
               />
 
-              <section className="grid w-full grid-cols-1 gap-[18px] lg:grid-cols-2">
-                {QUESTION_PROMPTS.map((prompt, index) => (
-                  <ReflectionPrompt
-                    key={prompt}
-                    onChange={(value) => updateReflectionAnswer(index, value)}
-                    prompt={prompt}
-                    value={reflectionAnswers[index] ?? ""}
-                  />
-                ))}
-              </section>
-
               <div className="flex flex-wrap items-center justify-end gap-[14px]">
                 {verificationMessage && (
                   <p
@@ -1185,7 +1107,7 @@ export default function EvaluationPage() {
                     className="min-h-[40px] rounded-[22px] bg-[#0a7f38] px-[18px] text-[15px] font-medium text-white"
                     onPress={saveAndFinish}
                   >
-                    Sauvegarder mes réponses et finir !
+                    Sauvegarder et finir !
                   </Button>
                 )}
               </div>

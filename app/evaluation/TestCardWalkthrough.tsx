@@ -40,8 +40,8 @@ export function DietBadge({ diet, small = false }: { diet: string; small?: boole
   );
 }
 
-// The predictions seen so far. Students compare the two columns themselves
-// to count correct and wrong predictions.
+// The predictions seen so far. Each row is marked ✅ or ❌ and tinted green
+// or red, so students only have to count the marks.
 export function TestResultsTable({ rows }: { rows: TestRow[] }) {
   return (
     <table className="w-full border-collapse text-left text-[13px] text-[#18181b]">
@@ -50,16 +50,30 @@ export function TestResultsTable({ rows }: { rows: TestRow[] }) {
           <th className="px-[6px] py-[4px] font-medium">nom</th>
           <th className="px-[6px] py-[4px] font-medium">prédiction</th>
           <th className="px-[6px] py-[4px] font-medium">vrai régime</th>
+          <th className="px-[6px] py-[4px] text-center font-medium">correct ?</th>
         </tr>
       </thead>
       <tbody>
-        {rows.map((row, index) => (
-          <tr key={String(row.nom ?? index)} className="border-b border-[#f0f0f0]">
-            <td className="px-[6px] py-[2px] font-medium">{String(row.nom ?? "")}</td>
-            <td className="px-[6px] py-[2px]"><DietBadge diet={String(row[PREDICTION_COLUMN] ?? "")} small /></td>
-            <td className="px-[6px] py-[2px]"><DietBadge diet={String(row[LABEL_COLUMN] ?? "")} small /></td>
-          </tr>
-        ))}
+        {rows.map((row, index) => {
+          const isCorrect = row[PREDICTION_COLUMN] === row[LABEL_COLUMN];
+
+          return (
+            <tr
+              key={String(row.nom ?? index)}
+              className={`border-b border-white ${isCorrect ? "bg-[#ecfdf3]" : "bg-[#fef0f0]"}`}
+            >
+              <td className="px-[6px] py-[2px] font-medium">{String(row.nom ?? "")}</td>
+              <td className="px-[6px] py-[2px]"><DietBadge diet={String(row[PREDICTION_COLUMN] ?? "")} small /></td>
+              <td className="px-[6px] py-[2px]"><DietBadge diet={String(row[LABEL_COLUMN] ?? "")} small /></td>
+              <td
+                aria-label={isCorrect ? "Correct" : "Erreur"}
+                className="px-[6px] py-[2px] text-center text-[16px]"
+              >
+                {isCorrect ? "✅" : "❌"}
+              </td>
+            </tr>
+          );
+        })}
       </tbody>
     </table>
   );

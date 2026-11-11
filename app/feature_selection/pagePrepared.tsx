@@ -11,7 +11,6 @@ import { PREPARED_FEATURES, PREPARED_FEATURES_REASON } from "@/app/lib/fixedData
 import { compareCellValues, loadLabelledTrainingRows, type TrainingTableRow } from "@/app/modelling/tableRows";
 
 const LABEL_COLUMN = "régime_alimentaire";
-const EXPLAIN_PROMPT = "Explique à un ami ce que l'ordinateur va recevoir pour apprendre.";
 const TABLE_HEADERS = ["nom", LABEL_COLUMN, ...PREPARED_FEATURES];
 
 type PreparedDataProps = {
@@ -20,13 +19,12 @@ type PreparedDataProps = {
 };
 
 // C4 and C5: the archaeologists already labelled the dinosaurs and chose the
-// features. C4 shows the prepared table; C5 only says that it exists. Both
-// answer the same question.
+// features. C4 shows the prepared table; C5 only says that it exists. No
+// question here: the trial run asks it on the pre/post sheet.
 export default function PreparedData({ exposure, onShowInstructions }: PreparedDataProps) {
   const router = useRouter();
   const [rows, setRows] = useState<TrainingTableRow[]>([]);
   const [sortConfig, setSortConfig] = useState<SortConfig>(null);
-  const [explanation, setExplanation] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const isExposed = exposure === "exposed";
 
@@ -80,15 +78,8 @@ export default function PreparedData({ exposure, onShowInstructions }: PreparedD
   };
 
   const goToNextStep = () => {
-    if (!explanation.trim()) {
-      return;
-    }
-
     writeSelectedFeatures(PREPARED_FEATURES);
-    saveFeatureSelectionEnd({
-      selectedFeatures: PREPARED_FEATURES,
-      featureSelectionReason: [EXPLAIN_PROMPT, explanation].join("\n"),
-    });
+    saveFeatureSelectionEnd({ selectedFeatures: PREPARED_FEATURES });
     router.push("/modelling");
   };
 
@@ -143,19 +134,9 @@ export default function PreparedData({ exposure, onShowInstructions }: PreparedD
           </div>
         )}
 
-        <label className="flex flex-col gap-[6px] text-[15px] font-semibold text-[#27272a]">
-          {EXPLAIN_PROMPT}
-          <textarea
-            className="min-h-[78px] resize-none rounded-[10px] border border-[#c9c9cf] bg-white px-[12px] py-[10px] text-[15px] font-normal leading-[1.4] outline-none transition focus:border-[#006fee]"
-            onChange={(event) => setExplanation(event.target.value)}
-            value={explanation}
-          />
-        </label>
-
         <div className="flex justify-end">
           <Button
-            className="min-h-[40px] rounded-[22px] bg-[#006fee] px-[18px] text-[15px] font-medium text-white disabled:cursor-not-allowed disabled:opacity-45"
-            isDisabled={!explanation.trim()}
+            className="min-h-[40px] rounded-[22px] bg-[#006fee] px-[18px] text-[15px] font-medium text-white"
             onPress={goToNextStep}
           >
             Suite

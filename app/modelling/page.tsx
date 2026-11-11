@@ -396,7 +396,6 @@ function formatFeatureGuess(guess: FeatureGuess) {
     FEATURE_GUESS_PROMPT,
     `Caractéristiques choisies: ${guess.features.join(", ")}`,
     `La plus importante: ${guess.mostImportant}`,
-    `Pourquoi: ${guess.reason}`,
   ].join("\n");
 }
 
@@ -426,7 +425,7 @@ function FeatureGuessForm({
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-[10px] rounded-[20px] bg-white px-[18px] py-[14px] text-[14px] text-[#18181b]">
+    <div className="flex flex-col gap-[10px] rounded-[20px] bg-white px-[18px] py-[14px] text-[14px] text-[#18181b]">
       <p className="font-semibold">1. Coche les caractéristiques qu&apos;il utilise selon toi:</p>
       <div className="grid grid-cols-2 gap-[6px]">
         {features.map((feature) => (
@@ -455,16 +454,6 @@ function FeatureGuessForm({
             <option key={feature} value={feature}>{feature}</option>
           ))}
         </select>
-      </label>
-      <label className="flex min-h-0 flex-1 flex-col gap-[6px]">
-        <span className="font-semibold">3. Explique pourquoi (facultatif):</span>
-        <textarea
-          className="min-h-[60px] flex-1 resize-none rounded-[10px] border border-[#c9c9cf] px-[10px] py-[6px] text-[14px]"
-          placeholder="Ta réponse ici..."
-          readOnly={isLocked}
-          value={guess.reason}
-          onChange={(event) => onChange({ ...guess, reason: event.target.value })}
-        />
       </label>
     </div>
   );
@@ -660,7 +649,7 @@ function ModellingPageContent() {
   const [tableOverlay, setTableOverlay] = useState<TableOverlayState>(null);
   const [isInstructionsOpen, setIsInstructionsOpen] = useState(true);
   const [blackBoxReflection, setBlackBoxReflection] = useState("");
-  const [featureGuess, setFeatureGuess] = useState<FeatureGuess>({ features: [], mostImportant: "", reason: "" });
+  const [featureGuess, setFeatureGuess] = useState<FeatureGuess>({ features: [], mostImportant: "" });
   const [isBlackBoxTraining, setIsBlackBoxTraining] = useState(false);
   const [blackBoxTrainingError, setBlackBoxTrainingError] = useState<string | null>(null);
   const [tutorialStep, setTutorialStep] = useState<ModellingTutorialStep>(null);

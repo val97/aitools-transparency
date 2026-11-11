@@ -35,11 +35,19 @@ function StepLabel({ number, children }: { number: number; children: ReactNode }
   );
 }
 
-function FeatureChip({ feature, mark }: { feature: string; mark?: string }) {
+// Small labels on a question card, relating it to the student's guess.
+export type NodeTag = { label: string; tone: "good" | "bad" | "star" };
+
+const TAG_TONE_CLASS_NAMES: Record<NodeTag["tone"], string> = {
+  good: "bg-[#e8faf0] text-[#0a7f38]",
+  bad: "bg-[#fff1f1] text-[#b42318]",
+  star: "bg-[#fff6d6] text-[#8a6100]",
+};
+
+function TagPill({ tag }: { tag: NodeTag }) {
   return (
-    <span className="inline-flex min-h-[28px] items-center gap-[4px] rounded-full bg-[#ebebec] px-[10px] text-[13px] font-medium text-[#18181b]">
-      {feature}
-      {mark && <span>{mark}</span>}
+    <span className={`inline-flex min-h-[24px] items-center rounded-full px-[8px] text-[12px] font-semibold ${TAG_TONE_CLASS_NAMES[tag.tone]}`}>
+      {tag.label}
     </span>
   );
 }
@@ -150,6 +158,7 @@ function RevealNode({
   dinosaursByLeaf,
   onSelectNode,
   showsCounts,
+  nodeTags,
 }: {
   node: WhiteBoxTreeNode;
   nodesById: Map<string, WhiteBoxTreeNode>;
@@ -157,6 +166,7 @@ function RevealNode({
   dinosaursByLeaf: Map<string, string[]>;
   onSelectNode?: (nodeId: string) => void;
   showsCounts: boolean;
+  nodeTags?: Map<string, NodeTag[]>;
 }) {
   const isHighlighted = highlightedIds.has(node.id);
   const noNode = node.leftId ? nodesById.get(node.leftId) : undefined;
@@ -180,6 +190,11 @@ function RevealNode({
           disabled={!onSelectNode}
           onClick={() => onSelectNode?.(node.id)}
         >
+          {nodeTags?.get(node.id)?.length ? (
+            <span className="flex flex-wrap gap-[6px]">
+              {nodeTags.get(node.id)?.map((tag) => <TagPill key={tag.label} tag={tag} />)}
+            </span>
+          ) : null}
           <span className="text-[16px] font-medium leading-[1.4] text-[#18181b]">
             {formatQuestion(node.selectedSplit)} ?
           </span>
@@ -201,6 +216,7 @@ function RevealNode({
             dinosaursByLeaf={dinosaursByLeaf}
             onSelectNode={onSelectNode}
             showsCounts={showsCounts}
+            nodeTags={nodeTags}
           />
           <RevealNode
             node={yesNode}
@@ -209,6 +225,7 @@ function RevealNode({
             dinosaursByLeaf={dinosaursByLeaf}
             onSelectNode={onSelectNode}
             showsCounts={showsCounts}
+            nodeTags={nodeTags}
           />
         </div>
       </div>
@@ -257,6 +274,7 @@ export function ModelTreeView({
   dinosaursByLeaf,
   onSelectNode,
   showsCounts = true,
+  nodeTags,
 }: {
   nodes: WhiteBoxTreeNode[];
   highlightedIds: Set<string>;
@@ -264,6 +282,7 @@ export function ModelTreeView({
   onSelectNode?: (nodeId: string) => void;
   // The training counts; off in evaluation, where the leaves list new dinosaurs.
   showsCounts?: boolean;
+  nodeTags?: Map<string, NodeTag[]>;
 }) {
   const nodesById = useMemo(() => new Map(nodes.map((node) => [node.id, node])), [nodes]);
   const rootNode = nodesById.get("root") ?? nodes[0];
@@ -349,7 +368,7 @@ export function ModelTreeView({
 
       resizeObserver.disconnect();
     };
-  }, [nodes, highlightedIds, dinosaursByLeaf]);
+  }, [nodes, highlightedIds, dinosaursByLeaf, nodeTags]);
 
   return (
     <div ref={frameRef} className="relative min-h-0 min-w-0 flex-1 overflow-hidden">
@@ -382,11 +401,162 @@ export function ModelTreeView({
               dinosaursByLeaf={dinosaursByLeaf}
               onSelectNode={onSelectNode}
               showsCounts={showsCounts}
+              nodeTags={nodeTags}
             />
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+// Rules page, step 1: the student's guess next to what the tree really uses,
+// feature by feature, then their "most important" pick against the tree's
+// first question. The same verdicts are tagged on the tree's question cards.
+function GuessComparison({
+  features,
+  usedFeatures,
+  mostImportantFeature,
+  studentGuess,
+}: {
+  features: string[];
+  usedFeatures: string[];
+  mostImportantFeature: string;
+  studentGuess: FeatureGuess;
+}) {
+  const matches = features.filter(
+    (feature) => studentGuess.features.includes(feature) === usedFeatures.includes(feature),
+  ).length;
+  const hasRightMostImportant = studentGuess.mostImportant === mostImportantFeature;
+
+  return (
+    <aside className="flex w-[290px] shrink-0 flex-col gap-[10px] overflow-auto rounded-[20px] bg-white p-[16px] shadow-[0_2px_8px_rgba(0,0,0,0.06),0_14px_28px_rgba(0,0,0,0.08)]">
+      <StepLabel number={1}>Compare avec ta devinette</StepLabel>
+      <table className="w-full border-collapse text-left text-[13px] text-[#18181b]">
+        <thead>
+          <tr className="text-[#52525b]">
+            <th className="px-[6px] py-[4px] font-medium">caractéristique</th>
+            <th className="px-[6px] py-[4px] text-center font-medium">toi</th>
+            <th className="px-[6px] py-[4px] text-center font-medium">l&apos;arbre</th>
+          </tr>
+        </thead>
+        <tbody>
+          {features.map((feature) => {
+            const isGuessed = studentGuess.features.includes(feature);
+            const isUsed = usedFeatures.includes(feature);
+
+            return (
+              <tr
+                key={feature}
+                className={`border-b border-white ${isGuessed === isUsed ? "bg-[#ecfdf3]" : "bg-[#fef0f0]"}`}
+              >
+                <td className="px-[6px] py-[3px] font-medium">{feature}</td>
+                <td className="px-[6px] py-[3px] text-center">{isGuessed ? "cochée" : "—"}</td>
+                <td className="px-[6px] py-[3px] text-center">{isUsed ? "utilisée" : "—"}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      <p className="text-[12px] leading-[1.4] text-[#52525b]">
+        {`${matches} sur ${features.length} bien devinées. Vert: comme l'arbre. Rouge: différent.`}
+      </p>
+
+      <div className="flex flex-col gap-[6px] rounded-[16px] bg-[#fffbeb] p-[10px]">
+        <p className="text-[14px] font-semibold text-[#8a6100]">★ La plus importante</p>
+        <div className="grid grid-cols-[auto_1fr] gap-x-[8px] gap-y-[2px] text-[13px] leading-[1.4] text-[#18181b]">
+          <span className="text-[#52525b]">Toi:</span>
+          <strong className="text-[#18181b]">{studentGuess.mostImportant || "—"}</strong>
+          <span className="text-[#52525b]">L&apos;arbre:</span>
+          <strong className="text-[#18181b]">{mostImportantFeature}</strong>
+        </div>
+        <p
+          className={`rounded-[10px] px-[10px] py-[4px] text-[13px] font-semibold ${
+            hasRightMostImportant ? "bg-[#e8faf0] text-[#0a7f38]" : "bg-[#fff1f1] text-[#b42318]"
+          }`}
+        >
+          {hasRightMostImportant ? "✓ Bien vu !" : "✗ Pas tout à fait"}
+        </p>
+        <p className="text-[12px] leading-[1.4] text-[#52525b]">
+          C&apos;est la première question de l&apos;arbre (★): tous les dinosaures y passent, et c&apos;est
+          elle qui sépare le mieux les carnivores des herbivores.
+        </p>
+      </div>
+    </aside>
+  );
+}
+
+// Rules page, step 2 (right column): every training dinosaur as a picture
+// card; picking one lights up its path in the tree. A hint pulses until a second one is tried.
+function DinoPicker({
+  rows,
+  features,
+  selectedIndex,
+  prediction,
+  showsHint,
+  onPick,
+}: {
+  rows: PredictionTableRow[];
+  features: string[];
+  selectedIndex: number;
+  prediction?: string;
+  showsHint: boolean;
+  onPick: (index: number) => void;
+}) {
+  const selectedRow = rows[selectedIndex];
+
+  return (
+    <aside className="flex w-[230px] shrink-0 flex-col gap-[8px] overflow-auto rounded-[20px] bg-white p-[12px] shadow-[0_2px_8px_rgba(0,0,0,0.06),0_14px_28px_rgba(0,0,0,0.08)]">
+      <StepLabel number={2}>Clique sur un dinosaure: son chemin s&apos;allume en bleu.</StepLabel>
+      {showsHint && (
+        <span className="animate-pulse self-start rounded-full bg-[#006fee] px-[10px] py-[2px] text-[12px] font-semibold text-white">
+          Essaie-en plusieurs !
+        </span>
+      )}
+      <div className="grid grid-cols-2 gap-[6px]">
+        {rows.map((row, index) => {
+          const name = String(row.nom ?? "");
+          const picture = dinoPictureSrc(name);
+          const isSelected = index === selectedIndex;
+
+          return (
+            <button
+              key={name || index}
+              type="button"
+              aria-pressed={isSelected}
+              className={`flex flex-col items-center rounded-[12px] border-2 px-[2px] py-[3px] transition ${
+                isSelected
+                  ? "border-[#006fee] bg-[#eaf3ff]"
+                  : "border-[#ebebec] bg-white hover:border-[#006fee]/50 hover:shadow-md"
+              }`}
+              onClick={() => onPick(index)}
+            >
+              {picture && <Image alt="" className="h-[30px] w-[56px] object-contain" height={30} src={picture} width={56} />}
+              <span className={`max-w-full truncate text-[11px] font-medium ${isSelected ? "text-[#006fee]" : "text-[#18181b]"}`}>
+                {name}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      {selectedRow && (
+        <div className="flex flex-col gap-[2px] rounded-[12px] bg-[#f5f5f5] px-[8px] py-[6px] text-[11px] leading-[1.35] text-[#18181b]">
+          {prediction && (
+            <span className="text-[12px]">
+              {String(selectedRow.nom ?? "")} → l&apos;arbre prédit{" "}
+              <strong className={prediction === "carnivore" ? "text-[#ff383c]" : "text-[#0a7f38]"}>
+                {prediction === "carnivore" ? "Carnivore" : "Herbivore"}
+              </strong>
+            </span>
+          )}
+          {features.map((feature) => (
+            <span key={feature} className="text-[#52525b]">
+              {feature}: <strong className="text-[#18181b]">{formatValue(selectedRow[feature])}</strong>
+            </span>
+          ))}
+        </div>
+      )}
+    </aside>
   );
 }
 
@@ -410,6 +580,7 @@ export function ModelReveal({
   studentGuess: FeatureGuess;
 }) {
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [hasPickedDino, setHasPickedDino] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState("root");
   const [isGiniHelpOpen, setIsGiniHelpOpen] = useState(stage === "gini");
   const nodesById = useMemo(() => new Map(nodes.map((node) => [node.id, node])), [nodes]);
@@ -431,7 +602,6 @@ export function ModelReveal({
 
     return byLeaf;
   }, [paths, rows]);
-  const selectedRow = rows[selectedIndex];
   const selectedNode = nodesById.get(selectedNodeId) ?? rootNode;
   const highlightedIds = useMemo(
     () =>
@@ -440,6 +610,32 @@ export function ModelReveal({
         : new Set(selectedNode ? [selectedNode.id] : []),
     [paths, selectedIndex, selectedNode, stage],
   );
+
+  const usedFeatures = useMemo(() => featuresUsedByTree(nodes), [nodes]);
+  const nodeTags = useMemo(() => {
+    const tags = new Map<string, NodeTag[]>();
+
+    if (stage !== "rules") {
+      return tags;
+    }
+
+    nodes.forEach((node) => {
+      const feature = node.selectedSplit?.feature;
+
+      if (!feature || !node.leftId || !node.rightId) {
+        return;
+      }
+
+      tags.set(node.id, [
+        ...(node.id === rootNode?.id ? [{ label: "★ la plus importante", tone: "star" as const }] : []),
+        studentGuess.features.includes(feature)
+          ? { label: "✓ tu l'avais cochée", tone: "good" as const }
+          : { label: "✗ tu ne l'avais pas cochée", tone: "bad" as const },
+      ]);
+    });
+
+    return tags;
+  }, [nodes, rootNode, stage, studentGuess.features]);
 
   if (!rootNode) {
     return null;
@@ -451,84 +647,36 @@ export function ModelReveal({
       highlightedIds={highlightedIds}
       dinosaursByLeaf={dinosaursByLeaf}
       onSelectNode={stage === "gini" ? setSelectedNodeId : undefined}
+      nodeTags={nodeTags}
     />
   );
 
   if (stage === "rules") {
-    const usedFeatures = featuresUsedByTree(nodes);
-    const unusedFeatures = features.filter((feature) => !usedFeatures.includes(feature));
+    const pickDino = (index: number) => {
+      if (index !== selectedIndex) {
+        setHasPickedDino(true);
+      }
+
+      setSelectedIndex(index);
+    };
 
     return (
       <div className="flex min-h-0 w-full flex-1 gap-[20px]">
-        <aside className={`${PANEL_CLASS_NAME} overflow-auto`}>
-          <div className="flex flex-col gap-[8px]">
-            <StepLabel number={1}>Tu avais deviné que le modèle utilise:</StepLabel>
-            <div className="flex flex-wrap gap-[6px]">
-              {studentGuess.features.map((feature) => (
-                <FeatureChip
-                  key={feature}
-                  feature={feature}
-                  mark={feature === studentGuess.mostImportant ? "★ la plus importante" : undefined}
-                />
-              ))}
-            </div>
-          </div>
-          <div className="flex flex-col gap-[8px]">
-            <StepLabel number={2}>En vrai, l&apos;arbre pose des questions sur:</StepLabel>
-            <div className="flex flex-wrap gap-[6px]">
-              {usedFeatures.map((feature, index) => (
-                <FeatureChip
-                  key={feature}
-                  feature={`${index + 1}. ${feature}`}
-                  mark={studentGuess.features.includes(feature) ? "✓ deviné" : "✗ pas deviné"}
-                />
-              ))}
-            </div>
-            {unusedFeatures.length > 0 && (
-              <p className="text-[13px] leading-[1.4] text-[#52525b]">
-                Jamais utilisé: {unusedFeatures.join(", ")}
-              </p>
-            )}
-          </div>
-          <div className="flex flex-col gap-[8px]">
-            <StepLabel number={3}>Clique sur un dinosaure et suis son chemin dans l&apos;arbre:</StepLabel>
-            <div className="flex flex-wrap gap-[6px]">
-              {rows.map((row, index) => (
-                <button
-                  key={String(row.nom ?? index)}
-                  type="button"
-                  className={`min-h-[28px] rounded-full px-[10px] text-[13px] font-medium ${
-                    index === selectedIndex ? "bg-[#006fee] text-white" : "bg-[#ebebec] text-[#18181b] hover:bg-[#dedee0]"
-                  }`}
-                  onClick={() => setSelectedIndex(index)}
-                >
-                  {String(row.nom ?? "")}
-                </button>
-              ))}
-            </div>
-            {selectedRow && (
-              <div className="flex items-center gap-[10px]">
-                {dinoPictureSrc(String(selectedRow.nom ?? "")) && (
-                  <Image
-                    alt={String(selectedRow.nom ?? "")}
-                    className="h-[70px] w-[100px] shrink-0 object-contain"
-                    height={70}
-                    src={dinoPictureSrc(String(selectedRow.nom ?? "")) ?? ""}
-                    width={100}
-                  />
-                )}
-                <div className="flex flex-wrap gap-[4px] text-[12px] text-[#18181b]">
-                  {features.map((feature) => (
-                    <span key={feature} className="inline-flex min-h-[22px] items-center rounded-full bg-[#f5f5f5] px-[8px] font-medium">
-                      {feature}: {formatValue(selectedRow[feature])}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </aside>
+        <GuessComparison
+          features={features}
+          usedFeatures={usedFeatures}
+          mostImportantFeature={rootNode.selectedSplit?.feature ?? ""}
+          studentGuess={studentGuess}
+        />
         {tree}
+        <DinoPicker
+          rows={rows}
+          features={features}
+          selectedIndex={selectedIndex}
+          prediction={paths[selectedIndex]?.at(-1)?.counts?.majority}
+          showsHint={!hasPickedDino}
+          onPick={pickDino}
+        />
       </div>
     );
   }

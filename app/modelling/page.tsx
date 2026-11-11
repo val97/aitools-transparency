@@ -92,7 +92,7 @@ const MODEL_REVEAL_PAGES: Record<ModelRevealStage, { step: string; title: string
   rules: {
     step: "Étape 2/3",
     title: "Comment le modèle prédit vraiment",
-    text: "Voici l'intérieur du modèle: un arbre de questions. Chaque dinosaure répond aux questions de haut en bas jusqu'en bas de l'arbre, où se trouve la prédiction. Suis les étapes 1, 2 et 3 à gauche.",
+    text: "Voici l'intérieur du modèle: un arbre de questions. Chaque dinosaure y répond de haut en bas jusqu'à la prédiction.",
   },
   gini: {
     step: "Étape 3/3",

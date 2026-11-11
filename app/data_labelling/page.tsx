@@ -8,7 +8,7 @@ import {
   DataLabellingInstructionsContent,
   type DataLabellingTutorialStep,
 } from "@/app/components";
-import { markCollectionStepStart } from "@/app/lib/experimentCollection";
+import { logScreen, markCollectionStepStart } from "@/app/lib/experimentCollection";
 import { conditionForStep, dataExposure, useExperimentCondition } from "@/app/lib/experimentCondition";
 
 export default function DataLabellingInstructions() {
@@ -49,6 +49,7 @@ export default function DataLabellingInstructions() {
 
   useEffect(() => {
     markCollectionStepStart("DL");
+    logScreen("data_labelling");
   }, []);
 
   if (condition === "WB") {

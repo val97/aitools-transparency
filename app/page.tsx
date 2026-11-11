@@ -5,7 +5,7 @@ import { useState } from "react";
 import { ConditionPicker, describeCondition } from "./components/ConditionPicker";
 import { HomeIdentificationField } from "./components/HomeIdentificationField";
 import { type ValidIdentificationKeys } from "./components/key";
-import { startExperiment } from "./lib/experimentCollection";
+import { logScreen, startExperiment } from "./lib/experimentCollection";
 import { type ExperimentCondition, saveExperimentCondition } from "./lib/experimentCondition";
 import Image from "next/image"
 
@@ -39,6 +39,7 @@ export default function Home() {
       group: validatedKeys.group,
       keys: validatedKeys.keys,
     });
+    logScreen("mission");
     setTestCondition(validatedKeys.group === "dev" ? validatedKeys.condition : null);
     setIsIdentificationValidated(true);
   };

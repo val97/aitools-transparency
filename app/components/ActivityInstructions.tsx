@@ -3,6 +3,7 @@
 import { Button } from "@heroui/react";
 import { type ReactNode } from "react";
 import Image from "next/image";
+import { logAction } from "@/app/lib/experimentCollection";
 
 type ActivityInstructionsOverlayProps = {
   title: string;
@@ -72,7 +73,10 @@ export function ActivityInstructionsButton({ onPress }: ActivityInstructionsButt
   return (
     <Button
       className="fixed left-[16px] top-[16px] z-40 min-h-[32px] rounded-full border border-white/50 bg-white/90 px-[12px] text-[13px] font-medium text-[#18181b] shadow-[0_2px_8px_rgba(0,0,0,0.12)] backdrop-blur-[20px] transition hover:bg-white"
-      onPress={onPress}
+      onPress={() => {
+        logAction("help_opened");
+        onPress();
+      }}
     >
       Euh je dois faire quoi déjà ?
     </Button>

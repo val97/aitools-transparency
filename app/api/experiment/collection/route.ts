@@ -40,6 +40,9 @@ function validateCollection(payload: unknown): payload is ExperimentCollectionPa
 
 export async function POST(request: Request) {
   const payload = (await request.json()) as unknown;
+  // Saves made during the activity replace the session's file but stay out of
+  // the log, which keeps one line per finished session.
+  const isPartial = new URL(request.url).searchParams.get("partial") === "1";
 
   if (!validateCollection(payload)) {
     return NextResponse.json({ error: "Invalid experiment collection payload." }, { status: 400 });
@@ -55,7 +58,9 @@ export async function POST(request: Request) {
   try {
     await mkdir(COLLECTION_DIR, { recursive: true });
     await writeFile(path.join(COLLECTION_DIR, fileName), JSON.stringify(payload, null, 2), "utf8");
-    await appendFile(COLLECTION_LOG_FILE, `${JSON.stringify(payload)}\n`, "utf8");
+    if (!isPartial) {
+      await appendFile(COLLECTION_LOG_FILE, `${JSON.stringify(payload)}\n`, "utf8");
+    }
 
     return NextResponse.json({ ok: true, fileName, collection: payload });
   } catch (error) {

@@ -6,6 +6,9 @@ import { readSelectedFeatures } from "@/app/lib/featureSelectionState";
 import { type IdentificationGroup, type IdentificationKey } from "@/app/components/key";
 
 export type FeatureTypeAttempts = Record<number, Record<string, string>>;
+// One line per screen reached and per key click, to see where groups get
+// stuck (scripts/timings.mjs turns it into minutes per screen).
+export type TimeLogEntry = { at: string; type: "screen" | "action"; name: string };
 export type TrainedTreeNode = string | Record<string, { yes: TrainedTreeNode; no: TrainedTreeNode }>;
 
 export type ExperimentCollection = {
@@ -34,6 +37,7 @@ export type ExperimentCollection = {
   PerfSatisfactionAnswer: string;
   ImprovementsAnswer: string;
   EvalEndTime: string | null;
+  TimeLog: TimeLogEntry[];
 };
 
 const EXPERIMENT_COLLECTION_STORAGE_KEY = "mobots:experiment-collection";
@@ -70,6 +74,7 @@ function emptyCollection(): ExperimentCollection {
     PerfSatisfactionAnswer: "",
     ImprovementsAnswer: "",
     EvalEndTime: null,
+    TimeLog: [],
   };
 }
 
@@ -147,6 +152,49 @@ export function startExperiment({
     GroupNb: groupToNumber(group),
     Condition: condition,
   }));
+}
+
+function appendTimeLog(type: TimeLogEntry["type"], name: string) {
+  updateExperimentCollection((currentCollection) => ({
+    ...currentCollection,
+    TimeLog: [...currentCollection.TimeLog, { at: now(), type, name }],
+  }));
+}
+
+// Sends the collection so far; the server overwrites the session's file, so
+// groups that never reach the end still leave their data.
+async function saveProgress() {
+  const collection = readExperimentCollection();
+
+  if (!collection.Condition) {
+    return;
+  }
+
+  try {
+    await fetch("/api/experiment/collection?partial=1", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(collection),
+    });
+  } catch {
+    // The final save at the end of the evaluation retries everything.
+  }
+}
+
+export function logScreen(name: string) {
+  const lastScreen = readExperimentCollection().TimeLog.findLast((entry) => entry.type === "screen");
+
+  // Re-renders and React's double effects would log the same screen twice.
+  if (lastScreen?.name === name) {
+    return;
+  }
+
+  appendTimeLog("screen", name);
+  void saveProgress();
+}
+
+export function logAction(name: string) {
+  appendTimeLog("action", name);
 }
 
 export function markCollectionStepStart(step: "DL" | "FS" | "Model" | "Eval") {
@@ -247,6 +295,7 @@ export function saveEvaluationEnd({
     PerfSatisfactionAnswer: perfSatisfactionAnswer,
     ImprovementsAnswer: improvementsAnswer,
     EvalEndTime: now(),
+    TimeLog: [...currentCollection.TimeLog, { at: now(), type: "screen", name: "end" }],
   }));
 }
 

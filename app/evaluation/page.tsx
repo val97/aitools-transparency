@@ -14,6 +14,8 @@ import {
 import { readDinoLabels } from "@/app/lib/dinoLabels";
 import { saveEvaluationResponses } from "@/app/lib/evaluationResponses";
 import {
+  logAction,
+  logScreen,
   markCollectionStepStart,
   saveEvaluationEnd,
   submitExperimentCollection,
@@ -701,6 +703,12 @@ export default function EvaluationPage() {
   }, []);
 
   useEffect(() => {
+    if (resolvedCondition) {
+      logScreen(cardPage ? `eval_${cardPage}` : "evaluation");
+    }
+  }, [cardPage, resolvedCondition]);
+
+  useEffect(() => {
     setAllCalculationsAreCorrect(false);
     setAccuracyInputs(emptyAccuracyInputs());
     setInvalidFields(new Set());
@@ -844,6 +852,7 @@ export default function EvaluationPage() {
 
       setInvalidFields(nextInvalidFields);
       setAllCalculationsAreCorrect(nextInvalidFields.size === 0);
+      logAction(nextInvalidFields.size === 0 ? "accuracy_check:ok" : "accuracy_check:wrong");
       setVerificationMessage(
         nextInvalidFields.size === 0
           ? "Tout est correct."

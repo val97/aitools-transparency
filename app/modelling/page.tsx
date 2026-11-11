@@ -24,6 +24,8 @@ import {
 import { readDinoLabels } from "@/app/lib/dinoLabels";
 import { dinoPictureSrc } from "@/app/lib/dinoPictures";
 import {
+  logAction,
+  logScreen,
   markCollectionStepStart,
   saveModelEnd,
   saveTrainedTree,
@@ -667,6 +669,21 @@ function ModellingPageContent() {
     markCollectionStepStart("Model");
   }, []);
 
+  const modelScreen =
+    modelPage === "rules"
+      ? "model_tree"
+      : modelPage === "gini"
+        ? "model_gini"
+        : showOutputs && isOutputsPageOpen
+          ? "model_guess"
+          : "model_training";
+
+  useEffect(() => {
+    if (resolvedCondition) {
+      logScreen(modelScreen);
+    }
+  }, [modelScreen, resolvedCondition]);
+
   const modelInput = useResolvedModelInput({
     condition,
     selectedFeatures,
@@ -754,6 +771,8 @@ function ModellingPageContent() {
   };
 
   const trainModel = async () => {
+    logAction("model_trained");
+
     if (condition === "WB") {
       router.push(`/modelling?training=1${!isTrained ? "&intro=1" : ""}`);
       return;

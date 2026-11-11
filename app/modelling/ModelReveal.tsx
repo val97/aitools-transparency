@@ -4,7 +4,7 @@ import Image from "next/image";
 import { type ReactNode, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ActivityInstructionsOverlay, GiniInstructionsContent } from "@/app/components";
 import { dinoPictureSrc } from "@/app/lib/dinoPictures";
-import { type TrainedTreeNode } from "@/app/lib/experimentCollection";
+import { logAction, type TrainedTreeNode } from "@/app/lib/experimentCollection";
 import { type PredictionTableRow, type TrainingTableRow } from "./tableRows";
 import { type WhiteBoxGiniResult, type WhiteBoxTreeNode } from "./trainingState";
 import { whiteBoxPathForRow } from "./whiteBoxTree";
@@ -660,6 +660,7 @@ export function ModelReveal({
     setSelectedNodeId(nodeId);
 
     if (node?.selectedSplit && node.leftId && node.rightId) {
+      logAction(`gini_question:${node.selectedSplit.feature}`);
       setSeenQuestionIds((current) => new Set(current).add(nodeId));
 
       if (nodeId !== rootNode?.id) {
@@ -686,6 +687,7 @@ export function ModelReveal({
     const pickDino = (index: number) => {
       if (index !== selectedIndex) {
         setHasPickedDino(true);
+        logAction(`tree_dino:${String(rows[index]?.nom ?? "")}`);
       }
 
       setSelectedIndex(index);

@@ -158,6 +158,18 @@ Participant keys: C4 group 1 `921, 534, 267`, group 2 `418, 893, 652`; C5 group 
 
 C1, C2 and C3 are unchanged.
 
+### Time per screen (trial run)
+
+Each session keeps a `TimeLog`: one line per screen reached (`mission`, `data_labelling`, `data_preparation` or `feature_selection`, `model_training`, `model_guess`, `model_tree`, `model_gini`, `evaluation`, `eval_cards`, `eval_accuracy`, `end`) and per key click (`help_opened`, `model_trained`, `tree_dino:…`, `gini_question:…`, `accuracy_check:ok|wrong`). Every new screen also sends the session to the server, which overwrites its file in `data/experiment-collections/`, so groups that never finish still leave their data; only the final save is added to `collections.jsonl`.
+
+After class, run:
+
+```bash
+npm run timings
+```
+
+It prints the minutes each group spent on each screen (`!` marks a screen more than 1.5× its median), where unfinished groups stopped, help clicks, accuracy checks, and medians per condition. `--include-dev` adds the "Tester une condition" runs, `--csv timings.csv` also writes one row per group. Times are per computer, so per group when students share one.
+
 ## Acknowledgments
 
 This project was made during the scope of my Semester Project in Pr. Francesco Mondada's lab: the MOBOTS Group where I was supervised by Valentina Ferraioli.

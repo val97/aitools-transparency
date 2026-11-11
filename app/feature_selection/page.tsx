@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { ActivityInstructionsOverlay, FeatureSelectionInstructionsContent } from "@/app/components";
 import { type FeatureSelectionTutorialStep } from "@/app/components/FeatureSelectionHints";
-import { markCollectionStepStart } from "@/app/lib/experimentCollection";
-import { conditionForStep, dataExposure, useExperimentCondition } from "@/app/lib/experimentCondition";
+import { logScreen, markCollectionStepStart } from "@/app/lib/experimentCollection";
+import { conditionForStep, dataExposure, readExperimentCondition, useExperimentCondition } from "@/app/lib/experimentCondition";
 import BlackBox from "./pageBB";
 import PreparedData from "./pagePrepared";
 import WhiteBox from "./pageWB";
@@ -46,6 +46,8 @@ export default function FeatureSelectionInstructions() {
 
   useEffect(() => {
     markCollectionStepStart("FS");
+    // Read directly: the hook still returns null on the first render.
+    logScreen(dataExposure(readExperimentCondition()) ? "data_preparation" : "feature_selection");
   }, []);
 
   if (exposure) {

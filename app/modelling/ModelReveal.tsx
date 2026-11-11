@@ -36,12 +36,14 @@ function StepLabel({ number, children }: { number: number; children: ReactNode }
 }
 
 // Small labels on a question card, relating it to the student's guess.
-export type NodeTag = { label: string; tone: "good" | "bad" | "star" };
+export type NodeTag = { label: string; tone: "good" | "bad" | "star" | "hint" | "seen" };
 
 const TAG_TONE_CLASS_NAMES: Record<NodeTag["tone"], string> = {
   good: "bg-[#e8faf0] text-[#0a7f38]",
   bad: "bg-[#fff1f1] text-[#b42318]",
   star: "bg-[#fff6d6] text-[#8a6100]",
+  hint: "animate-pulse bg-[#006fee] text-white",
+  seen: "bg-[#ebebec] text-[#52525b]",
 };
 
 function TagPill({ tag }: { tag: NodeTag }) {
@@ -572,16 +574,20 @@ export function ModelReveal({
   features,
   stage,
   studentGuess,
+  onOtherQuestionOpened,
 }: {
   nodes: WhiteBoxTreeNode[];
   rows: PredictionTableRow[];
   features: string[];
   stage: ModelRevealStage;
   studentGuess: FeatureGuess;
+  // Gini page: called once a question other than the first one is opened.
+  onOtherQuestionOpened?: () => void;
 }) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [hasPickedDino, setHasPickedDino] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState("root");
+  const [seenQuestionIds, setSeenQuestionIds] = useState<Set<string>>(() => new Set(["root"]));
   const [isGiniHelpOpen, setIsGiniHelpOpen] = useState(stage === "gini");
   const nodesById = useMemo(() => new Map(nodes.map((node) => [node.id, node])), [nodes]);
   const rootNode = nodesById.get("root") ?? nodes[0];
@@ -615,7 +621,18 @@ export function ModelReveal({
   const nodeTags = useMemo(() => {
     const tags = new Map<string, NodeTag[]>();
 
-    if (stage !== "rules") {
+    // Gini page: questions not opened yet pulse "Clique-moi".
+    if (stage === "gini") {
+      nodes.forEach((node) => {
+        if (node.selectedSplit && node.leftId && node.rightId) {
+          tags.set(node.id, [
+            seenQuestionIds.has(node.id)
+              ? { label: "✓ vue", tone: "seen" }
+              : { label: "👆 Clique-moi", tone: "hint" },
+          ]);
+        }
+      });
+
       return tags;
     }
 
@@ -635,7 +652,21 @@ export function ModelReveal({
     });
 
     return tags;
-  }, [nodes, rootNode, stage, studentGuess.features]);
+  }, [nodes, rootNode, seenQuestionIds, stage, studentGuess.features]);
+  const questionCount = nodes.filter((node) => node.selectedSplit && node.leftId && node.rightId).length;
+  const selectNode = (nodeId: string) => {
+    const node = nodesById.get(nodeId);
+
+    setSelectedNodeId(nodeId);
+
+    if (node?.selectedSplit && node.leftId && node.rightId) {
+      setSeenQuestionIds((current) => new Set(current).add(nodeId));
+
+      if (nodeId !== rootNode?.id) {
+        onOtherQuestionOpened?.();
+      }
+    }
+  };
 
   if (!rootNode) {
     return null;
@@ -646,7 +677,7 @@ export function ModelReveal({
       nodes={nodes}
       highlightedIds={highlightedIds}
       dinosaursByLeaf={dinosaursByLeaf}
-      onSelectNode={stage === "gini" ? setSelectedNodeId : undefined}
+      onSelectNode={stage === "gini" ? selectNode : undefined}
       nodeTags={nodeTags}
     />
   );
@@ -687,7 +718,10 @@ export function ModelReveal({
     <div className="flex min-h-0 w-full flex-1 gap-[20px]">
       {tree}
       <aside className={`${PANEL_CLASS_NAME} overflow-auto`}>
-        <StepLabel number={1}>Clique sur une question de l&apos;arbre.</StepLabel>
+        <StepLabel number={1}>Clique sur les questions de l&apos;arbre (👆) pour voir les calculs.</StepLabel>
+        <p className="text-[13px] font-medium text-[#52525b]">
+          Questions regardées: {seenQuestionIds.size}/{questionCount}
+        </p>
         {selectedNode && (
           <>
             <p className="rounded-[12px] bg-[#f5f5f5] px-[12px] py-[8px] text-[16px] font-semibold leading-[1.4] text-[#18181b]">

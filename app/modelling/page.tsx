@@ -656,6 +656,8 @@ function ModellingPageContent() {
   const [hasStartedTutorial, setHasStartedTutorial] = useState(false);
   const [modelPage, setModelPage] = useState<"guess" | ModelRevealStage>("guess");
   const [hasOpenedModel, setHasOpenedModel] = useState(false);
+  // C5/C6 Gini page: "Suite" waits until a second question has been opened.
+  const [hasOpenedOtherQuestion, setHasOpenedOtherQuestion] = useState(false);
   const [isOutputsPageOpen, setIsOutputsPageOpen] = useState(false);
   const showOutputs = showsTrainingOutputs(experimentCondition);
   const showTables = showsTrainingDataTables(experimentCondition);
@@ -792,7 +794,7 @@ function ModellingPageContent() {
   const canGoToEvaluation =
     isTrained &&
     (condition !== "BB" || isBlackBoxReflectionComplete) &&
-    (!revealsModel || modelPage === "gini");
+    (!revealsModel || (modelPage === "gini" && hasOpenedOtherQuestion));
   const goToEvaluation = () => {
     saveModelEnd(
       condition !== "BB"
@@ -909,6 +911,7 @@ function ModellingPageContent() {
             features={modelInput.features}
             stage={modelPage}
             studentGuess={featureGuess}
+            onOtherQuestionOpened={() => setHasOpenedOtherQuestion(true)}
           />
           <div className="flex justify-between">
             <Button
@@ -925,13 +928,20 @@ function ModellingPageContent() {
                 Pourquoi ces questions ?
               </Button>
             ) : (
-              <Button
-                className="min-h-[40px] rounded-[22px] bg-[#006fee] px-[18px] text-[15px] font-medium text-white disabled:cursor-not-allowed disabled:opacity-45"
-                isDisabled={!canGoToEvaluation}
-                onPress={goToEvaluation}
-              >
-                Suite
-              </Button>
+              <div className="flex items-center gap-[12px]">
+                {!hasOpenedOtherQuestion && (
+                  <p className="text-[14px] font-medium text-[#52525b]">
+                    Clique sur une autre question de l&apos;arbre pour continuer.
+                  </p>
+                )}
+                <Button
+                  className="min-h-[40px] rounded-[22px] bg-[#006fee] px-[18px] text-[15px] font-medium text-white disabled:cursor-not-allowed disabled:opacity-45"
+                  isDisabled={!canGoToEvaluation}
+                  onPress={goToEvaluation}
+                >
+                  Suite
+                </Button>
+              </div>
             )}
           </div>
         </Surface>

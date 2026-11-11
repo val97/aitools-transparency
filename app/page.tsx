@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { ConditionPicker, describeCondition } from "./components/ConditionPicker";
 import { HomeIdentificationField } from "./components/HomeIdentificationField";
+import { SessionsPanel } from "./components/SessionsPanel";
 import { type ValidIdentificationKeys } from "./components/key";
 import { logScreen, startExperiment } from "./lib/experimentCollection";
 import { type ExperimentCondition, saveExperimentCondition } from "./lib/experimentCondition";
@@ -20,11 +21,12 @@ const PRESENTATION_TEXT = (
   </>
 );
 
-type StartMode = "students" | "test";
+type StartMode = "students" | "test" | "sessions";
 
 const START_MODES: { id: StartMode; label: string }[] = [
   { id: "students", label: "Élèves" },
   { id: "test", label: "Tester une condition" },
+  { id: "sessions", label: "Sessions" },
 ];
 
 export default function Home() {
@@ -54,7 +56,9 @@ export default function Home() {
       className="flex min-h-screen items-center justify-center bg-zinc-50 bg-cover bg-center bg-no-repeat text-zinc-900"
       style={{ backgroundImage: "url('/home_background.png')" }}
     >
-      <main className="mx-auto flex w-full max-w-4xl flex-col items-center justify-center gap-8 rounded-3xl border border-zinc-200 bg-white p-10 shadow-lg ">
+      <main className={`mx-auto flex w-full ${
+        !isIdentificationValidated && startMode === "sessions" ? "max-w-[1400px]" : "max-w-4xl"
+      } flex-col items-center justify-center gap-8 rounded-3xl border border-zinc-200 bg-white p-10 shadow-lg`}>
         <h1 className="text-4xl font-bold">Bienvenue dans AI Tools !</h1>
         {!isIdentificationValidated ? (
           <>
@@ -88,6 +92,8 @@ export default function Home() {
                 </p>
                 <HomeIdentificationField onValidated={validateIdentification} />
               </div>
+            ) : startMode === "sessions" ? (
+              <SessionsPanel />
             ) : (
               <div className="flex w-full flex-col gap-4">
                 <p className="text-center text-sm text-zinc-500">

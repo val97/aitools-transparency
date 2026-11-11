@@ -170,6 +170,8 @@ npm run timings
 
 It prints the minutes each group spent on each screen (`!` marks a screen more than 1.5× its median), where unfinished groups stopped, help clicks, accuracy checks, and medians per condition. `--include-dev` adds the "Tester une condition" runs, `--csv timings.csv` also writes one row per group. Times are per computer, so per group when students share one.
 
+During class, the start page's "Sessions" tab shows the same table live (refreshed every 10 s, today's sessions by default, test runs on request): each running group's current screen and for how long, in red when slower than usual, and medians per condition. It reads `/api/experiment/sessions`, which leaves out participant keys. The shared calculations are in `scripts/sessionTimings.mjs`.
+
 ## Acknowledgments
 
 This project was made during the scope of my Semester Project in Pr. Francesco Mondada's lab: the MOBOTS Group where I was supervised by Valentina Ferraioli.

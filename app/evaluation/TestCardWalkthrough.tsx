@@ -40,9 +40,10 @@ export function DietBadge({ diet, small = false }: { diet: string; small?: boole
   );
 }
 
-// The predictions seen so far. Each row is marked ✅ or ❌ and tinted green
-// or red, so students only have to count the marks.
-export function TestResultsTable({ rows }: { rows: TestRow[] }) {
+// The predictions seen so far. Each row is tinted green or red, and on the
+// counting page also marked ✅ or ❌, so students only have to count the marks.
+// The narrow sidebar next to the cards keeps the tint only.
+export function TestResultsTable({ rows, showsMarks = true }: { rows: TestRow[]; showsMarks?: boolean }) {
   return (
     <table className="w-full border-collapse text-left text-[13px] text-[#18181b]">
       <thead>
@@ -50,7 +51,7 @@ export function TestResultsTable({ rows }: { rows: TestRow[] }) {
           <th className="px-[6px] py-[4px] font-medium">nom</th>
           <th className="px-[6px] py-[4px] font-medium">prédiction</th>
           <th className="px-[6px] py-[4px] font-medium">vrai régime</th>
-          <th className="px-[6px] py-[4px] text-center font-medium">correct ?</th>
+          {showsMarks && <th className="px-[6px] py-[4px] text-center font-medium">correct ?</th>}
         </tr>
       </thead>
       <tbody>
@@ -65,12 +66,14 @@ export function TestResultsTable({ rows }: { rows: TestRow[] }) {
               <td className="px-[6px] py-[2px] font-medium">{String(row.nom ?? "")}</td>
               <td className="px-[6px] py-[2px]"><DietBadge diet={String(row[PREDICTION_COLUMN] ?? "")} small /></td>
               <td className="px-[6px] py-[2px]"><DietBadge diet={String(row[LABEL_COLUMN] ?? "")} small /></td>
-              <td
-                aria-label={isCorrect ? "Correct" : "Erreur"}
-                className="px-[6px] py-[2px] text-center text-[16px]"
-              >
-                {isCorrect ? "✅" : "❌"}
-              </td>
+              {showsMarks && (
+                <td
+                  aria-label={isCorrect ? "Correct" : "Erreur"}
+                  className="px-[6px] py-[2px] text-center text-[16px]"
+                >
+                  {isCorrect ? "✅" : "❌"}
+                </td>
+              )}
             </tr>
           );
         })}
@@ -182,7 +185,7 @@ export function TestCardWalkthrough({
       <aside className={`${PANEL_CLASS_NAME} w-[360px] shrink-0`}>
         <p className="text-[16px] font-semibold text-black">Résultats</p>
         <div className="min-h-0 flex-1 overflow-auto">
-          <TestResultsTable rows={seenRows} />
+          <TestResultsTable rows={seenRows} showsMarks={false} />
         </div>
         <Button
           className="min-h-[40px] rounded-[22px] bg-[#006fee] px-[18px] text-[15px] font-medium text-white"

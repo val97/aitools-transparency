@@ -1,6 +1,33 @@
 # Welcome to AI-Tools
 
-> Fork of Eglantine Vialaneix's AI Tools, adding conditions C4 to C7 for a study of transparency and students' mental models of machine learning. C1 to C3 are the original activity, unchanged.
+> Fork of Eglantine Vialaneix's AI Tools, adding conditions C4 to C7 for a study of transparency and students' mental models of machine learning. C1 to C3 are the original activity.
+
+## `trial-run` branch: what changed and how to test it
+
+This branch is the version for the classroom trial run. The goal is an activity of 25 to 30 minutes, with a paper pre/post sheet instead of questions inside the app, and timing data to find where groups get stuck.
+
+**Changes compared with `main`**
+
+- **Shorter data labelling**: students read 5 sheets (3 herbivores, 2 carnivores, including the deliberately mislabelled Styracosaurus); the other 5 start already sorted, "annotated earlier by the team" (`SHEETS_TO_READ` in `app/lib/fixedData.ts`). The model still trains on all 10 labels, so its results do not change.
+- **No questions inside the app**: removed the data-preparation question, the optional "why" of the feature guess and the two reflection questions at the end. The note box during labelling stays.
+- **Easier counting**: the accuracy page marks each prediction ✅ or ❌ on a green or red row (C1 to C3 get the same column in their table).
+- **Clearer model reveal (C5, C6)**: page 2/3 compares the guess with the tree feature by feature, says whether the "most important" pick matches the tree's first question, tags each question card, and lists the dinosaurs as picture cards. Page 3/3 makes clickable questions pulse and keeps "Suite" disabled until a second question has been opened.
+- **Time per screen**: every session logs its screens and key clicks and saves as it goes. A live **Sessions** tab on the start page and `npm run timings` show the minutes per screen (see [Time per screen](#time-per-screen-trial-run)).
+- Also from `feature/sortable-prediction-table`: the C4 to C7 prediction table can be sorted by column.
+
+**Quick test (about 10 minutes)**
+
+1. Set up and start the app as in [Getting Started](#getting-started) and [Deployment](#deployment) (backend in one terminal, `npm run dev` in another), then open http://localhost:3000.
+2. Click the **Tester une condition** tab and pick **C5** or **C6** (the conditions with the most changes; C4 and C7 skip the two tree pages). Test sessions are saved with group 0 and kept apart from student data.
+3. Go through the steps:
+   - **Data labelling**: the instructions say 5 sheets are already annotated; only 5 remain to read.
+   - **Data preparation**: no question, "Suite" works straight away.
+   - **Model training**: press Entraîner, then Suite; tick the features you think the model uses and pick the most important one (pick a wrong one to see the correction).
+   - **Page 2/3**: the guess-vs-tree panel on the left, the tags on the tree, the dinosaur cards on the right.
+   - **Page 3/3**: "Suite" stays grey until you open a second question.
+   - **Evaluation**: 10 cards, then the accuracy page with the ✅/❌ column (the answers are 3 correct, 7 wrong, 10 total, 30%), then "Sauvegarder et finir !".
+4. Back on the start page, open the **Sessions** tab and tick **Inclure les tests**: your run appears with its minutes per screen. Open it from a second browser tab while a run is in progress to see the live status.
+5. In a terminal: `npm run timings -- --include-dev` prints the same table.
 
 AI-Tools is a digital platform designed to introduce machine learning concepts to teenagers around 14 years old. In the application, students take on the role of archaeologists and follow the four main steps of a typical machine learning pipeline in order to train an algorithm to classify dinosaurs as either **Carnivores** or **Herbivores**.
 
@@ -22,8 +49,10 @@ The current repository is organized as follows:
 │   │   │   └── predictions/
 │   │   │       └── route.ts     # Stores or retrieves model predictions
 │   │   ├── experiment/
-│   │   │   └── collection/
-│   │   │       └── route.ts     # Collects experimental data
+│   │   │   ├── collection/
+│   │   │   │   └── route.ts     # Collects experimental data
+│   │   │   └── sessions/
+│   │   │       └── route.ts     # Time per screen of the saved sessions (Sessions tab)
 │   │   └── modelling/
 │   │       └── gini/
 │   │           └── route.ts     # Computes Gini impurity for model training
@@ -55,7 +84,7 @@ The current repository is organized as follows:
 │
 ├── data/                        # Dataset files used by the application
 ├── public/                      # Static assets such as images and csv files
-├── scripts/                     # Utility scripts (for backend setup mainly)
+├── scripts/                     # Backend setup, npm run timings and its shared calculations
 ├── package.json                 # Project dependencies and npm scripts
 ├── README.md                    # Repository documentation
 └── AI Tools compressed.pdf      # Project final report
@@ -135,7 +164,7 @@ To ensure data collection, a set of user keys was created in order to assigned t
 
 The third user key is always optional.
 
-Quicker for testing: the start page has two tabs. "Élèves" is where groups enter their keys (the default, used in class). "Tester une condition" shows the new activities (C4 to C7) as a 2×2 grid and the original activity (C1 to C3, kept as the reference), each card saying what is visible; one click starts that condition with its developer keys (group "dev"). After the choice, a "Mode test" badge names the condition and "Changer" goes back.
+Quicker for testing: the start page has three tabs. "Élèves" is where groups enter their keys (the default, used in class). "Sessions" shows the time per screen of every session (see [Time per screen](#time-per-screen-trial-run)). "Tester une condition" shows the new activities (C4 to C7) as a 2×2 grid and the original activity (C1 to C3, kept as the reference), each card saying what is visible; one click starts that condition with its developer keys (group "dev"). After the choice, a "Mode test" badge names the condition and "Changer" goes back.
 
 ### Conditions C4 to C7 (same actions, different transparency)
 
@@ -143,20 +172,20 @@ C4 to C7 were added for the exploratory mental-model study. They form a 2×2: th
 
 | Step | C4 (data shown, model hidden) | C5 (data hidden, model shown) |
 |---|---|---|
-| Data labelling | Read the 10 sheets, with the dinosaur's drawing next to the sheet; each card shows the archaeologists' label and their reason | Read the 10 sheets, with the drawing; no labels shown |
-| Data preparation | Labelled table and the 4 chosen features with the team's reason; answer "Explique à un ami ce que l'ordinateur va recevoir pour apprendre." | Only "the data has been prepared"; same question |
-| Model training | Hidden tree; press Entraîner, then Suite opens a separate page where they see what it predicted for each training dinosaur (table, no labels), then tick the features they think it uses, pick the most important one and optionally say why | Same task (page 1/3), then "Ouvrir le modèle" leads to two more full-screen pages: 2/3 the tree's questions next to their guess (which features they ticked vs which the tree really uses), then following a dinosaur; 3/3 opens with the Gini explanation, then the same tree, where clicking a question shows its Gini impurity. "Retour" goes back; the guess is locked once the model is opened. No tables with labels |
-| Evaluation | New dinosaurs one card at a time (data, the closed model's prediction, real diet), then a page to calculate accuracy, then a page with the two reflection questions | Same, but each card also shows the dinosaur's path down the tree |
+| Data labelling | Read the 5 remaining sheets (the other 5 are already sorted), with the dinosaur's drawing next to the sheet; each card shows the archaeologists' label and their reason | Read the 5 remaining sheets, with the drawing; no labels shown |
+| Data preparation | Labelled table and the 4 chosen features with the team's reason | Only "the data has been prepared" |
+| Model training | Hidden tree; press Entraîner, then Suite opens a separate page where they see what it predicted for each training dinosaur (table, no labels), then tick the features they think it uses and pick the most important one | Same task (page 1/3), then "Ouvrir le modèle" leads to two more full-screen pages. 2/3: the tree, with their guess compared feature by feature on the left (and their "most important" pick against the tree's first question), each question card tagged, and the dinosaurs as picture cards on the right to follow their path. 3/3: the Gini explanation, then the same tree, where clicking a question shows its Gini impurity; "Suite" waits until a second question is opened. "Retour" goes back; the guess is locked once the model is opened. No tables with labels |
+| Evaluation | New dinosaurs one card at a time (data, the closed model's prediction, real diet), then a page to calculate accuracy where each prediction is marked ✅ or ❌ | Same, but each card also shows the dinosaur's path down the tree |
 
 In C5 and C6 the revealed tree is drawn like C1's tree: question cards with NON/OUI buttons, connector lines, and the path of the selected dinosaur in blue (`app/modelling/ModelReveal.tsx`).
 
 One archaeologist label is deliberately wrong (`MISLABELLED_DINO` in `app/lib/fixedData.ts`, default Styracosaurus labelled carnivore). Set it to `null` for correct labels only. With the default features (bipède, longueur, poids, période) the tree gets 100% on training and 30% on the test set; with no wrong label, 50%.
 
-The feature guess is saved in `BBModellingAnswers` (C4 to C7), and `TrainedTree` (C5 and C6, saved when the model is opened); the answer to the data-preparation question is saved in `FeatureSelectionReason`.
+The feature guess is saved in `BBModellingAnswers` (C4 to C7), and `TrainedTree` (C5 and C6, saved when the model is opened). On this branch the free-text fields (`FeatureSelectionReason`, `PerfSatisfactionAnswer`, `ImprovementsAnswer`) stay empty: those questions are on the paper pre/post sheet.
 
 Participant keys: C4 group 1 `921, 534, 267`, group 2 `418, 893, 652`; C5 group 1 `731, 146, 395`, group 2 `587, 812, 269`; C6 group 1 `643, 358, 972`, group 2 `415, 786, 239`; C7 group 1 `527, 864, 193`, group 2 `346, 615, 958`.
 
-C1, C2 and C3 are unchanged.
+C1, C2 and C3 keep their own steps; on this branch they share the shorter labelling (5 sheets), the ✅/❌ column and the end without reflection questions, because these screens are common to all conditions.
 
 ### Time per screen (trial run)
 

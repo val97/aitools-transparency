@@ -12,7 +12,8 @@ from tree_helpers import compute_all_ginis
 
 LABEL_COLUMN = "régime_alimentaire"
 DATA_ROOT = Path(__file__).resolve().parents[2] / "public" / "data"
-DATA_FILES = {"df_train.csv"}
+# run1/ holds the dataset of Run 1 (the black-box warm-up before the activity).
+DATA_FILES = {"df_train.csv", "run1/df_train.csv"}
 
 
 def _json_value(value):

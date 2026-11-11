@@ -66,7 +66,7 @@ export async function POST(request: Request) {
         )
       : {};
   const filters = Array.isArray(body.filters) ? body.filters.filter(isSplitFilter) : [];
-  const dataFile = "df_train.csv";
+  const dataFile = body.dataFile === "run1/df_train.csv" ? "run1/df_train.csv" : "df_train.csv";
 
   try {
     const response = await fetch(`${FASTAPI_URL}/gini`, {

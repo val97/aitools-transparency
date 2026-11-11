@@ -2,6 +2,14 @@
 
 > Fork of Eglantine Vialaneix's AI Tools, adding conditions C4 to C7 for a study of transparency and students' mental models of machine learning. C1 to C3 are the original activity, unchanged.
 
+## `black-box-step` branch
+
+Work in progress, kept apart from `trial-run`: a short **black-box step** (Run 1) shown before the activity, the same for every condition. The researcher presents it on a big screen: a computer program sorts 6 dinosaurs, each shown as its card with the program's answer stamped on it next to the right group, without showing how the program works. It gives a baseline of what students think the program does before any transparency (they write it on the paper sheet). Details in [Run 1](#run-1-black-box-warm-up-all-conditions).
+
+This branch starts from the sortable prediction table and does not include the `trial-run` changes (5 sheets, no in-app questions, time per screen, etc.).
+
+**To try it**: set up and start the app as in [Getting Started](#getting-started) and [Deployment](#deployment), open http://localhost:3000, click **Tester une condition** and pick any condition. Run 1 starts right away (intro, 6 cards, transition); the activity follows unchanged.
+
 AI-Tools is a digital platform designed to introduce machine learning concepts to teenagers around 14 years old. In the application, students take on the role of archaeologists and follow the four main steps of a typical machine learning pipeline in order to train an algorithm to classify dinosaurs as either **Carnivores** or **Herbivores**.
 
 The learning sequence is organized into four activities: **data labelling**, **feature selection**, **model training**, and **evaluation**. Through these activities, students progressively discover how training data is created, how relevant features are selected, how a model learns from data, and how its performance can be assessed.
@@ -157,6 +165,12 @@ The feature guess is saved in `BBModellingAnswers` (C4 to C7), and `TrainedTree`
 Participant keys: C4 group 1 `921, 534, 267`, group 2 `418, 893, 652`; C5 group 1 `731, 146, 395`, group 2 `587, 812, 269`; C6 group 1 `643, 358, 972`, group 2 `415, 786, 239`; C7 group 1 `527, 864, 193`, group 2 `346, 615, 958`.
 
 C1, C2 and C3 are unchanged.
+
+### Run 1 (black-box warm-up, all conditions)
+
+After the start page (keys or "Tester une condition"), every condition first does Run 1, then the activity above (Run 2, unchanged). It is meant to be shown by the researcher on a big screen (students note their ideas on the paper sheet). Run 1 only shows what "the program" answers: an intro, 6 dinosaurs one at a time (its answer and the right group, highlighted when they differ), then "Maintenant, tu vas travailler avec un nouveau programme." No data, tree, training step or accuracy is shown. The same greedy Gini tree is trained silently (`app/run1/Run1Activity.tsx`).
+
+Run 1 reads its own dataset in `public/data/run1/` (`df_train.csv`, `df_test.csv`, same format as `public/data/`). For now it reuses the activity's dinosaurs the other way round: the program is trained on the 10 test dinosaurs and shows the 10 main ones, which have cards; replace the two files to change it. It uses the Run 2 features present in those files (otherwise every column both files share), and shows 6 dinosaurs, up to 3 of them wrong. Each one appears as its card with the program's answer stamped on it: `public/data/run1/cards/<nom>.png` if present (for new dinosaurs), otherwise the sheet in `public/dino_sheets/`, otherwise a plain card with the name. Saved fields: `Run1StartTime`, `Run1Features` (what the program could look at), `Run1Cards`, `Run1EndTime`, `Run2StartTime`.
 
 ## Acknowledgments
 

@@ -1,0 +1,11 @@
+nom,régime_alimentaire,période,bipède,longueur (m),poids (kg),sous-ordre_taxonomique,famille_taxonomique
+Tyrannosaurus,carnivore,Crétacé supérieur,True,12.0,7000,Saurischia,Tyrannosaurinae
+Spinosaurus,carnivore,Crétacé supérieur,True,18.0,7400,Saurischia,Spinosaurinae
+Megalosaurus,carnivore,Jurassique moyen,True,9.0,700,Saurischia,Megalosaurinae
+Utahraptor,carnivore,Crétacé inférieur,True,6.0,350,Saurischia,Dromaeosauridae
+Brachiosaurus,herbivore,Jurassique supérieur,False,30.0,50000,Saurischia,Brachiosauridae
+Stegosaurus,herbivore,Jurassique supérieur,False,9.0,3000,Ornithischia,Stegosaurinae
+Apatosaurus,herbivore,Jurassique supérieur,False,21.0,218000,Saurischia,Diplodocidae
+Styracosaurus,herbivore,Crétacé supérieur,False,5.5,2700,Ornithischia,Centrosaurinae
+Plateosaurus,herbivore,Trias supérieur,True,7.0,4000,Saurischia,Plateosauridae
+Gallimimus,carnivore,Crétacé supérieur,True,6.0,200,Saurischia,Ornithomimidae

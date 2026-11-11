@@ -4,7 +4,9 @@ import { readDinoLabels } from "@/app/lib/dinoLabels";
 import { type ModelDataFile } from "./modelConfig";
 
 export type TableCellValue = string | number | boolean | undefined;
-export type LabelledDataFile = ModelDataFile | "df_test.csv";
+// run1/ is Run 1's own copy of the data (see app/run1/Run1Activity.tsx).
+export type Run1DataFile = "run1/df_train.csv" | "run1/df_test.csv";
+export type LabelledDataFile = ModelDataFile | "df_test.csv" | Run1DataFile;
 export type TrainingTableRow = Record<string, string>;
 export type PredictionTableRow = {
   régime_alimentaire_prédit?: string;
@@ -119,6 +121,17 @@ export async function loadLabelledTableRows(dataFile: LabelledDataFile) {
 
   labelledTrainingRowsCache.set(cacheKey, table);
   return table;
+}
+
+// The CSV as it is on disk, without the labels saved by the students.
+export async function loadCsvTable(dataFile: LabelledDataFile) {
+  const response = await fetch(`/data/${dataFile}`);
+
+  if (!response.ok) {
+    throw new Error(`Impossible de charger ${dataFile}.`);
+  }
+
+  return parseCsv(await response.text());
 }
 
 export function countDietRows(rows: TrainingTableRow[]) {

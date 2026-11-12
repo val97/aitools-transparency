@@ -6,9 +6,10 @@ import { ConditionPicker, describeCondition } from "./components/ConditionPicker
 import { HomeIdentificationField } from "./components/HomeIdentificationField";
 import { SessionsPanel } from "./components/SessionsPanel";
 import { type ValidIdentificationKeys } from "./components/key";
-import { logScreen, startExperiment } from "./lib/experimentCollection";
+import { logScreen, markRun2Start, startExperiment } from "./lib/experimentCollection";
 import { type ExperimentCondition, saveExperimentCondition } from "./lib/experimentCondition";
 import Image from "next/image"
+import { Run1Activity } from "./run1/Run1Activity";
 
 
 const PRESENTATION_TEXT = (
@@ -22,6 +23,8 @@ const PRESENTATION_TEXT = (
 );
 
 type StartMode = "students" | "test" | "sessions";
+// After identification, Run 1 (black-box warm-up), then Run 2 starts with the mission.
+type HomeStage = "identification" | "run1" | "run2";
 
 const START_MODES: { id: StartMode; label: string }[] = [
   { id: "students", label: "Élèves" },
@@ -30,7 +33,7 @@ const START_MODES: { id: StartMode; label: string }[] = [
 ];
 
 export default function Home() {
-  const [isIdentificationValidated, setIsIdentificationValidated] = useState(false);
+  const [stage, setStage] = useState<HomeStage>("identification");
   const [startMode, setStartMode] = useState<StartMode>("students");
   const [testCondition, setTestCondition] = useState<ExperimentCondition | null>(null);
 
@@ -41,13 +44,19 @@ export default function Home() {
       group: validatedKeys.group,
       keys: validatedKeys.keys,
     });
-    logScreen("mission");
+    logScreen("run1_intro");
     setTestCondition(validatedKeys.group === "dev" ? validatedKeys.condition : null);
-    setIsIdentificationValidated(true);
+    setStage("run1");
+  };
+
+  const startRun2 = () => {
+    markRun2Start();
+    logScreen("mission");
+    setStage("run2");
   };
 
   const backToStart = () => {
-    setIsIdentificationValidated(false);
+    setStage("identification");
     setTestCondition(null);
   };
 
@@ -57,10 +66,10 @@ export default function Home() {
       style={{ backgroundImage: "url('/home_background.png')" }}
     >
       <main className={`mx-auto flex w-full ${
-        !isIdentificationValidated && startMode === "sessions" ? "max-w-[1400px]" : "max-w-4xl"
+        stage === "identification" && startMode === "sessions" ? "max-w-[1400px]" : "max-w-4xl"
       } flex-col items-center justify-center gap-8 rounded-3xl border border-zinc-200 bg-white p-10 shadow-lg`}>
-        <h1 className="text-4xl font-bold">Bienvenue dans AI Tools !</h1>
-        {!isIdentificationValidated ? (
+        {stage !== "run1" ? <h1 className="text-4xl font-bold">Bienvenue dans AI Tools !</h1> : null}
+        {stage === "identification" ? (
           <>
             <div
               className="flex rounded-full bg-zinc-100 p-1"
@@ -116,6 +125,10 @@ export default function Home() {
                 </button>
               </div>
             ) : null}
+            {stage === "run1" ? (
+              <Run1Activity onComplete={startRun2} />
+            ) : (
+              <>
             <p className="max-w-4xl text-left text-lg text-zinc-600 ">
               {PRESENTATION_TEXT}
             </p>
@@ -133,6 +146,8 @@ export default function Home() {
             >
               C&apos;est parti !
             </Link>
+              </>
+            )}
           </>
         )}
       </main>

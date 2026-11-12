@@ -11,11 +11,20 @@ export type FeatureTypeAttempts = Record<number, Record<string, string>>;
 export type TimeLogEntry = { at: string; type: "screen" | "action"; name: string };
 export type TrainedTreeNode = string | Record<string, { yes: TrainedTreeNode; no: TrainedTreeNode }>;
 
+export type Run1Card = { nom: string; programAnswer: string; correctGroup: string };
+
+// Run1* fields: the black-box warm-up, identical for every condition. Every
+// other step field belongs to Run 2 (the activity itself).
 export type ExperimentCollection = {
   StartTime: string | null;
   UserIDs: string[];
   GroupNb: number | null;
   Condition: ExperimentCondition | null;
+  Run1StartTime: string | null;
+  Run1Features: string[] | null;
+  Run1Cards: Run1Card[] | null;
+  Run1EndTime: string | null;
+  Run2StartTime: string | null;
   DLStartTime: string | null;
   DataLabels: DinoLabelMap | null;
   DataLabellingNotes: string;
@@ -53,6 +62,11 @@ function emptyCollection(): ExperimentCollection {
     UserIDs: [],
     GroupNb: null,
     Condition: null,
+    Run1StartTime: null,
+    Run1Features: null,
+    Run1Cards: null,
+    Run1EndTime: null,
+    Run2StartTime: null,
     DLStartTime: null,
     DataLabels: null,
     DataLabellingNotes: "",
@@ -203,6 +217,29 @@ export function markCollectionStepStart(step: "DL" | "FS" | "Model" | "Eval") {
   updateExperimentCollection((currentCollection) => ({
     ...currentCollection,
     [key]: currentCollection[key] ?? now(),
+  }));
+}
+
+export function markRun1Start() {
+  updateExperimentCollection((currentCollection) => ({
+    ...currentCollection,
+    Run1StartTime: currentCollection.Run1StartTime ?? now(),
+  }));
+}
+
+export function saveRun1End(cards: Run1Card[], features: string[]) {
+  updateExperimentCollection((currentCollection) => ({
+    ...currentCollection,
+    Run1Features: features,
+    Run1Cards: cards,
+    Run1EndTime: now(),
+  }));
+}
+
+export function markRun2Start() {
+  updateExperimentCollection((currentCollection) => ({
+    ...currentCollection,
+    Run2StartTime: currentCollection.Run2StartTime ?? now(),
   }));
 }
 

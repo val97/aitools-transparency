@@ -8,6 +8,9 @@ import path from "node:path";
 export const COLLECTION_DIR = path.join(process.cwd(), "data", "experiment-collections");
 
 export const SCREEN_ORDER = [
+  "run1_intro",
+  "run1_cards",
+  "run1_transition",
   "mission",
   "data_labelling",
   "feature_selection",

@@ -37,6 +37,9 @@ const REFRESH_SECONDS = 10;
 const IDLE_MINUTES = 20;
 
 const SCREEN_LABELS: Record<string, string> = {
+  run1_intro: "BN intro",
+  run1_cards: "BN cartes",
+  run1_transition: "BN fin",
   mission: "Mission",
   data_labelling: "Fiches",
   feature_selection: "Caract.",

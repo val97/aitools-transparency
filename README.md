@@ -2,9 +2,9 @@
 
 > Fork of Eglantine Vialaneix's AI Tools, adding conditions C4 to C7 for a study of transparency and students' mental models of machine learning. C1 to C3 are the original activity.
 
-## `trial-run` branch: what changed and how to test it
+## `trial-run-black-box` branch: the version for the trial
 
-This branch is the version for the classroom trial run. The goal is an activity of 25 to 30 minutes, with a paper pre/post sheet instead of questions inside the app, and timing data to find where groups get stuck.
+This branch is `trial-run` with the black-box step of `black-box-step` added at the start, for a trial where each group works on its own computer (no network needed). The goal is an activity of 25 to 30 minutes, with a paper pre/post sheet instead of questions inside the app, and timing data to find where groups get stuck. `trial-run` and `black-box-step` stay as they were.
 
 **Changes compared with `main`**
 
@@ -13,21 +13,36 @@ This branch is the version for the classroom trial run. The goal is an activity 
 - **Easier counting**: the accuracy page marks each prediction ✅ or ❌ on a green or red row (C1 to C3 get the same column in their table).
 - **Clearer model reveal (C5, C6)**: page 2/3 compares the guess with the tree feature by feature, says whether the "most important" pick matches the tree's first question, tags each question card, and lists the dinosaurs as picture cards. Page 3/3 makes clickable questions pulse and keeps "Suite" disabled until a second question has been opened.
 - **Time per screen**: every session logs its screens and key clicks and saves as it goes. A live **Sessions** tab on the start page and `npm run timings` show the minutes per screen (see [Time per screen](#time-per-screen-trial-run)).
+- **Black-box step first** (from `black-box-step`): right after the keys, each group sees a short black-box step on its own computer: the activity's model sorts 6 new dinosaurs, each shown as its card with the model's answer stamped on it next to the right group (half are wrong), then "Maintenant, vous allez découvrir comment ce programme fonctionne." and the condition's normal flow. Details in [Run 1](#run-1-black-box-warm-up-all-conditions).
 - Also from `feature/sortable-prediction-table`: the C4 to C7 prediction table can be sorted by column.
+
+**Running the trial on two computers**
+
+1. On each computer, once before class: clone the repository, `git switch trial-run-black-box`, then follow [Getting Started](#getting-started) (`npm install`, `npm run setup:backend`).
+2. On the day, on each computer: `npm run dev:backend` in one terminal, `npm run dev` in another, then open http://localhost:3000.
+3. Stay on the **Élèves** tab and type the group's keys (the third key is optional, so groups of 2 leave it empty):
+
+   | Computer | Condition | Keys |
+   |---|---|---|
+   | 1 | C4 | `921`, `534` |
+   | 2 | C5 | `731`, `146` |
+
+4. Write each student's key on their paper sheet, to match it with the app's data.
+5. After class, each computer has its session in `data/experiment-collections/`. Copy that folder's `.json` files from one computer into the other's, then run `npm run timings` there to see both groups side by side (see [Time per screen](#time-per-screen-trial-run)).
 
 **Quick test (about 10 minutes)**
 
-1. Set up and start the app as in [Getting Started](#getting-started) and [Deployment](#deployment) (backend in one terminal, `npm run dev` in another), then open http://localhost:3000.
-2. Click the **Tester une condition** tab and pick **C5** or **C6** (the conditions with the most changes; C4 and C7 skip the two tree pages). Test sessions are saved with group 0 and kept apart from student data.
-3. Go through the steps:
+1. Start the app as above, click the **Tester une condition** tab and pick **C5** or **C6** (the conditions with the most changes; C4 and C7 skip the two tree pages). Test sessions are saved with group 0 and kept apart from student data.
+2. Go through the steps:
+   - **Black-box step**: intro with a fan of cards, 6 cards with the stamped answers, then the transition sentence.
    - **Data labelling**: the instructions say 5 sheets are already annotated; only 5 remain to read.
    - **Data preparation**: no question, "Suite" works straight away.
    - **Model training**: press Entraîner, then Suite; tick the features you think the model uses and pick the most important one (pick a wrong one to see the correction).
    - **Page 2/3**: the guess-vs-tree panel on the left, the tags on the tree, the dinosaur cards on the right.
    - **Page 3/3**: "Suite" stays grey until you open a second question.
    - **Evaluation**: 10 cards, then the accuracy page with the ✅/❌ column (the answers are 3 correct, 7 wrong, 10 total, 30%), then "Sauvegarder et finir !".
-4. Back on the start page, open the **Sessions** tab and tick **Inclure les tests**: your run appears with its minutes per screen. Open it from a second browser tab while a run is in progress to see the live status.
-5. In a terminal: `npm run timings -- --include-dev` prints the same table.
+3. Back on the start page, open the **Sessions** tab and tick **Inclure les tests**: your run appears with its minutes per screen, starting with the black-box screens ("BN intro", "BN cartes", "BN fin").
+4. In a terminal: `npm run timings -- --include-dev` prints the same table.
 
 AI-Tools is a digital platform designed to introduce machine learning concepts to teenagers around 14 years old. In the application, students take on the role of archaeologists and follow the four main steps of a typical machine learning pipeline in order to train an algorithm to classify dinosaurs as either **Carnivores** or **Herbivores**.
 
@@ -189,7 +204,7 @@ C1, C2 and C3 keep their own steps; on this branch they share the shorter labell
 
 ### Time per screen (trial run)
 
-Each session keeps a `TimeLog`: one line per screen reached (`mission`, `data_labelling`, `data_preparation` or `feature_selection`, `model_training`, `model_guess`, `model_tree`, `model_gini`, `evaluation`, `eval_cards`, `eval_accuracy`, `end`) and per key click (`help_opened`, `model_trained`, `tree_dino:…`, `gini_question:…`, `accuracy_check:ok|wrong`). Every new screen also sends the session to the server, which overwrites its file in `data/experiment-collections/`, so groups that never finish still leave their data; only the final save is added to `collections.jsonl`.
+Each session keeps a `TimeLog`: one line per screen reached (`run1_intro`, `run1_cards`, `run1_transition` for the black-box step, `mission`, `data_labelling`, `data_preparation` or `feature_selection`, `model_training`, `model_guess`, `model_tree`, `model_gini`, `evaluation`, `eval_cards`, `eval_accuracy`, `end`) and per key click (`help_opened`, `model_trained`, `tree_dino:…`, `gini_question:…`, `accuracy_check:ok|wrong`). Every new screen also sends the session to the server, which overwrites its file in `data/experiment-collections/`, so groups that never finish still leave their data; only the final save is added to `collections.jsonl`.
 
 After class, run:
 
@@ -200,6 +215,12 @@ npm run timings
 It prints the minutes each group spent on each screen (`!` marks a screen more than 1.5× its median), where unfinished groups stopped, help clicks, accuracy checks, and medians per condition. `--include-dev` adds the "Tester une condition" runs, `--csv timings.csv` also writes one row per group. Times are per computer, so per group when students share one.
 
 During class, the start page's "Sessions" tab shows the same table live (refreshed every 10 s, today's sessions by default, test runs on request): each running group's current screen and for how long, in red when slower than usual, and medians per condition. It reads `/api/experiment/sessions`, which leaves out participant keys. The shared calculations are in `scripts/sessionTimings.mjs`.
+
+### Run 1 (black-box warm-up, all conditions)
+
+After the start page (keys or "Tester une condition"), every condition first does Run 1, then the activity above (Run 2). On this branch each group sees it on its own computer (on `black-box-step` it was meant for a big screen); students note their ideas on the paper sheet. Run 1 only shows what "the program" answers: an intro, 6 dinosaurs one at a time (its answer and the right group, highlighted when they differ), then "Maintenant, vous allez découvrir comment ce programme fonctionne." No data, tree, training step or accuracy is shown (`app/run1/Run1Activity.tsx`).
+
+The program is the C4 to C7 activity's own model, not a separate one: Run 1 builds it exactly as the modelling page does (`df_train.csv`, the archaeologists' labels including the wrong Styracosaurus, the 4 prepared features, the same greedy Gini algorithm), so it is the same tree students later meet in the activity. It shows the dinosaurs listed in `public/data/run1/df_test.csv` (same format as `public/data/`), in file order: 6 dinosaurs that appear nowhere in the activity (facts from the NHM Dino Directory), Triceratops, Hypsilophodon, Velociraptor, Ceratosaurus, Ankylosaurus, Edmontosaurus. The model answers 3 herbivores and 3 carnivores and gets half of them wrong (Hypsilophodon and Edmontosaurus, herbivores it calls carnivores; Ceratosaurus, a carnivore it calls herbivore), close to its 30% on the activity's test set. Edit that file to change the dinosaurs. Each one appears as its card with the model's answer stamped on it: `public/data/run1/cards/<nom>.png` if present (the 6 cards are there, without the museum's dinosaur pictures, which are copyright NHM and not published here), otherwise the sheet in `public/dino_sheets/`, otherwise a plain card with the name. Saved fields: `Run1StartTime`, `Run1Features` (what the model could look at), `Run1Cards`, `Run1EndTime`, `Run2StartTime`.
 
 ## Acknowledgments
 

@@ -4,8 +4,8 @@ import { readDinoLabels } from "@/app/lib/dinoLabels";
 import { type ModelDataFile } from "./modelConfig";
 
 export type TableCellValue = string | number | boolean | undefined;
-// run1/ is Run 1's own copy of the data (see app/run1/Run1Activity.tsx).
-export type Run1DataFile = "run1/df_train.csv" | "run1/df_test.csv";
+// The dinosaurs shown in Run 1 (see app/run1/Run1Activity.tsx).
+export type Run1DataFile = "run1/df_test.csv";
 export type LabelledDataFile = ModelDataFile | "df_test.csv" | Run1DataFile;
 export type TrainingTableRow = Record<string, string>;
 export type PredictionTableRow = {

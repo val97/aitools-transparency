@@ -10,7 +10,8 @@ import {
   saveRun1End,
   type Run1Card,
 } from "@/app/lib/experimentCollection";
-import { PREPARED_FEATURES } from "@/app/lib/fixedData";
+import { ARCHAEOLOGIST_DIETS, PREPARED_FEATURES } from "@/app/lib/fixedData";
+import { MODEL_CONFIG } from "@/app/modelling/modelConfig";
 import { loadCsvTable, type Run1DataFile, type TrainingTableRow } from "@/app/modelling/tableRows";
 import { buildGreedyGiniTree, predictRowWithWhiteBoxTree } from "@/app/modelling/whiteBoxTree";
 
@@ -18,20 +19,19 @@ import { buildGreedyGiniTree, predictRowWithWhiteBoxTree } from "@/app/modelling
 // activity itself (Run 2), shown by the researcher on a big screen. Students
 // only see what the program answers, which gives a baseline of what they think
 // it does before any transparency (they write it on the paper sheet). The
-// same greedy Gini tree is trained silently on Run 1's own dataset; nothing of
-// the data, the tree or the accuracy is shown.
+// program is the C4-C7 activity's model, built exactly as the modelling page
+// builds it (same data, archaeologists' labels and prepared features); nothing
+// of the data, the tree or the accuracy is shown.
 //
-// The dataset lives in public/data/run1/ (same format as public/data/). To
-// change the dinosaurs, replace those two CSV files; no code change needed.
-// Each test dinosaur is shown as its card: public/data/run1/cards/<nom>.png,
-// else the activity's own sheet in public/dino_sheets/, else a plain card.
+// The dinosaurs shown are the rows of public/data/run1/df_test.csv (same
+// format as public/data/), in file order: edit that file to change them. Each
+// is shown as its card: public/data/run1/cards/<nom>.png, else the activity's
+// own sheet in public/dino_sheets/, else a plain card.
 // Screens avoid the words learn, train, data, model, tree, rule, accuracy, AI.
 
-const TRAIN_FILE: Run1DataFile = "run1/df_train.csv";
-const TEST_FILE: Run1DataFile = "run1/df_test.csv";
+const CARDS_FILE: Run1DataFile = "run1/df_test.csv";
 const LABEL_COLUMN = "régime_alimentaire";
 const CARD_COUNT = 6;
-const MAX_WRONG_CARDS = 3;
 
 type Stage = "intro" | "cards" | "transition";
 type ShownCard = Run1Card & { row: TrainingTableRow };
@@ -40,46 +40,20 @@ type Run1Program = { features: string[]; cards: ShownCard[] };
 const PRIMARY_BUTTON_CLASS_NAME =
   "rounded-full bg-sky-600 px-8 py-3 text-sm font-semibold text-white transition hover:bg-sky-500 disabled:cursor-not-allowed disabled:bg-zinc-300";
 
-// Run 2's prepared features when the Run 1 files have them, otherwise every
-// column both files share, so a different dataset still works.
-function run1Features(trainHeaders: string[], testHeaders: string[]) {
-  const shared = trainHeaders.filter(
-    (header) => testHeaders.includes(header) && header !== "nom" && header !== LABEL_COLUMN,
-  );
-  const prepared = PREPARED_FEATURES.filter((feature) => shared.includes(feature));
-
-  return prepared.length > 0 ? prepared : shared;
-}
-
-// Up to MAX_WRONG_CARDS cards the program gets wrong, the rest right, in file
-// order, alternating and starting with a right one.
-function pickCards(cards: ShownCard[]) {
-  const wrong = cards.filter((card) => card.programAnswer !== card.correctGroup);
-  const right = cards.filter((card) => card.programAnswer === card.correctGroup);
-  const rightCount = Math.min(right.length, CARD_COUNT - Math.min(wrong.length, MAX_WRONG_CARDS));
-  const wrongCount = Math.min(wrong.length, CARD_COUNT - rightCount);
-  const picked: ShownCard[] = [];
-
-  for (let index = 0; index < Math.max(rightCount, wrongCount); index += 1) {
-    if (index < rightCount) picked.push(right[index]);
-    if (index < wrongCount) picked.push(wrong[index]);
-  }
-
-  return picked;
-}
-
 async function runProgram(): Promise<Run1Program> {
-  const [train, test] = await Promise.all([loadCsvTable(TRAIN_FILE), loadCsvTable(TEST_FILE)]);
-  const features = run1Features(train.headers, test.headers);
-  const nodes = await buildGreedyGiniTree({ features, labels: {}, dataFile: TRAIN_FILE });
-  const cards = test.rows.map<ShownCard>((row) => ({
+  const features = PREPARED_FEATURES;
+  const [cardsTable, nodes] = await Promise.all([
+    loadCsvTable(CARDS_FILE),
+    buildGreedyGiniTree({ features, labels: ARCHAEOLOGIST_DIETS, dataFile: MODEL_CONFIG.data }),
+  ]);
+  const cards = cardsTable.rows.slice(0, CARD_COUNT).map<ShownCard>((row) => ({
     nom: row.nom,
     programAnswer: predictRowWithWhiteBoxTree(row, nodes),
     correctGroup: row[LABEL_COLUMN],
     row,
   }));
 
-  return { features, cards: pickCards(cards) };
+  return { features, cards };
 }
 
 const CARD_SOURCES = (name: string) => [`/data/run1/cards/${name}.png`, `/dino_sheets/${name}.png`];
@@ -290,7 +264,7 @@ export function Run1Activity({ onComplete }: { onComplete: () => void }) {
   if (stage === "transition") {
     return (
       <div className="flex flex-col items-center gap-6 text-center">
-        <p className="text-2xl font-semibold">Maintenant, tu vas travailler avec un nouveau programme.</p>
+        <p className="text-2xl font-semibold">Maintenant, vous allez découvrir comment ce programme fonctionne.</p>
         <button className={PRIMARY_BUTTON_CLASS_NAME} onClick={onComplete} type="button">
           Continuer
         </button>
